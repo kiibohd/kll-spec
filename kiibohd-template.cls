@@ -96,7 +96,7 @@
 % KLL Listings Definition
 \lstdefinelanguage{KLL}
 {
-	keywords={Name, Version, Date, Author, KLL},
+	keywords={Name, Version, Date, Author, KLL, None},
 	comment=[l]{\#},
 	string=[b]{"},
 }
@@ -231,7 +231,7 @@
 			(\paperwidth+0.9cm,2.5cm); % Not sure why I need the 0.9cm
 			\node[anchor=west,xshift=-0.10cm,yshift=1.15cm]{\includegraphics[width=2.5in]{logo.pdf}};
 			\node[anchor=north,xshift=\paperwidth/2,yshift=1.45cm]{\color{white}\@titlename};
-			\node[anchor=east,xshift=\paperwidth-1.15cm,yshift=1.15cm]{\color{white}\MakeUppercase{\leftmark}};
+			\node[anchor=east,xshift=\paperwidth-1.15cm,yshift=1.15cm]{\color{white}{\small\leftmark}};
 			\end{tikzpicture}
 		};
 		\end{tikzpicture}

@@ -13,11 +13,11 @@
  %  - FIXME is another highlighting tag :D
 
 
-\title{KLL Spec v0.3a}
+\title{KLL Spec v0.3b}
 \titlename{Keyboard Layout Language Spec}
 \author{HaaTa - Jacob Alexander}
 \email{haata@kiibohd.com}
-\docrev{0.3a}
+\docrev{0.3b}
 \urlname{kiibohd.com}
 
 %%% Titlepage %%%
@@ -33,6 +33,7 @@
 	\vhEntry{0.2c}{2014-05-18}{HaaTa}{Finished USB Code Table}
 	\vhEntry{0.3}{2014-09-07}{HaaTa}{Initial KLL implementation}
 	\vhEntry{0.3a}{2014-11-21}{HaaTa}{Adding Defines}
+    \vhEntry{0.3b}{2015-05-02}{HaaTa}{Adding Media Keys and Null Key}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -269,7 +270,6 @@ S0x2A : <result>;
 S124  : <result>;
 \end{lstlisting}
 
-Scan Code 0x00 is reserved for identifying unassigned keys.
 The compiler will error if it is specified in the keymap explicitly.
 
 
@@ -446,10 +446,10 @@ Trigger inputs in the combination are separated by pluses.
 The Scan Codes and USB Codes are evaluated/expanded first, then sequences are evaluated and finally combinations (Codes have the highest precedence, then sequences, then combinations).
 
 \begin{lstlisting}
-U["Q"-"Y"]+U["Enter"]              : <result>;
-S[0x2A-0x50]+S[12], U[5]           : <result>;
-U["A"-"Z"(42),"Tab"](30)+U[12](53) : <result>;
-'Can you type this?'(23) + 'a'(43) : <result>;
+U["Q"-"Y"] + U["Enter"]              : <result>;
+S[0x2A-0x50] + S[12], U[5]           : <result>;
+U["A"-"Z"(42),"Tab"](30) + U[12](53) : <result>;
+'Can you type this?'(23) + 'a'(43)   : <result>;
 \end{lstlisting}
 
 Analog triggers cannot be set across multiple inputs in the combination.
@@ -487,6 +487,55 @@ Result USB Codes are defined the same way as trigger USB Codes (Section \ref{sub
 Refer to Section \ref{chpt:USBCodeTable} for the complete list of USB Codes.
 
 
+% None
+\subsection{None}
+
+Sometimes it is useful to block the fall-through to a previous layer and have the key do nothing.
+The \textbf{None} keyword is case sensitive.
+
+\begin{lstlisting}
+<trigger> : None;
+\end{lstlisting}
+
+
+% Consumer Control Code
+\subsection{Consumer Control Code}
+
+Consumer Control Codes, or Media Keys are a USB HID control type that allows you to control media functions.
+These include global hotkeys such as Play, Next and Previous.
+
+Similar to USB Codes (Section \ref{subsec:USB_Code}), Consumer Control Codes can be defined as numbers or by its symbolic name.
+It is important to note that there is no support for sequences, combinations or ranges of Consumer Control Codes.
+
+\begin{lstlisting}
+<trigger> : CON0xB0;
+<trigger> : CON176;
+<trigger> : CON"Play";
+<trigger> : CON"play"; # Same as previous
+\end{lstlisting}
+
+Refer to Section \ref{chpt:ConsCodeTable} for the complete list of Consumer Control Codes.
+
+
+% System Control Code
+\subsection{System Control Code}
+
+System Control Codes are a USB HID control type that allows you to system level functions.
+These include global hotkeys such as Power, Sleep and Eject.
+
+Similar to USB Codes (Section \ref{subsec:USB_Code}), System Control Codes can be defined as numbers or by its symbolic name.
+It is important to note that there is no support for sequences, combinations or ranges of System Control Codes.
+
+\begin{lstlisting}
+<trigger> : SYS0x82;
+<trigger> : SYS130;
+<trigger> : SYS"Sleep";
+<trigger> : SYS"sleep"; # Same as previous
+\end{lstlisting}
+
+Refer to Section \ref{chpt:SysCodeTable} for the complete list of System Control Codes.
+
+
 % Sequence
 \subsection{Sequence}
 
@@ -517,8 +566,8 @@ The syntax is the same as trigger combinations (Section \ref{subsec:Combination}
 Keep in mind, if the keyboard does not support NKRO then some result combinations will not be possible.
 
 \begin{lstlisting}
-<trigger> : U["Q"-"Y"]+U["Enter"];
-<trigger> : U["A"-"Z","Tab"]+U[12];
+<trigger> : U["Q"-"Y"] + U["Enter"];
+<trigger> : U["A"-"Z","Tab"] + U[12];
 <trigger> : 'Can you type this?' + 'a';
 \end{lstlisting}
 
@@ -791,6 +840,50 @@ It is possible to use any arbitrary USB Code as a function key.
 However, using something like a SysReq as your function key (in the default map) makes it unclear to other readers unless you explicitly comment this case in the .kll file.
 
 
+% System Control Code Table
+\chapter{System Control Code Table}
+\label{chpt:SysCodeTable}
+
+Following is a table of USB System Control Codes.
+These are useful for defining keys to signal the OS to power off, sleep or eject something.
+
+Please refer to the USB HID spec for more details.
+Do not expect your OS to recognize these codes.
+Many of them are system specific.
+
+\begin{ltable}{syscodes}{ l | r | l }{Table of System Control Codes}
+
+\textbf{Sys Code} & \textbf{Name} & \textbf{Alternate Name(s)} \\
+\hline
+\hline
+
+\input{SystemCodeTable} % See .tex file for data
+
+\end{ltable}
+
+
+% Consumer Control Code Table
+\chapter{Consumer Control Code Table}
+\label{chpt:ConsCodeTable}
+
+Following is a table of USB Consumer Control Codes.
+These are useful for defining media keys such as Next, Previous, Pause, etc.
+
+Please refer to the USB HID spec for more details.
+Do not expect your OS to recognize these codes.
+Many of them are system specific.
+
+\begin{ltable}{conscodes}{ l | r | l }{Table of Consumer Control Codes}
+
+\textbf{Cons Code} & \textbf{Name} & \textbf{Alternate Name(s)} \\
+\hline
+\hline
+
+\input{ConsumerCodeTable} % See .tex file for data
+
+\end{ltable}
+
+
 % Capabilities Table
 \chapter{Capabilities Table}
 \label{chpt:CapabilitiesTable}
@@ -815,6 +908,7 @@ The number beside each of the arguments specifies the size of the argument in by
 \begin{fglossary}
 \begin{description}[itemsep=0em]
 
+\glossent{Fall-through}{When a key is undefined on a particular layer, the key definition on the previously stacked layer will be used. Eventually the key definition will be set to using the default layer. If the None keyword is used, then the fall-through will stop and no action will take place.}
 \glossent{Latch}{When referring to keyboards, a key function that is only enabled until the release of the next keypress.}
 \glossent{Lock}{When referring to keyboards, a key function that is enabled until that key is pressed again (e.g. Caps Lock).}
 \glossent{NKRO}{N-Key Rollover is the capability to press N number of keys at the same time on a keyboard and have them all register on the OS simultaneously.}
