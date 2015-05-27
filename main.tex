@@ -35,7 +35,7 @@
 	\vhEntry{0.3a}{2014-11-21}{HaaTa}{Adding Defines}
 	\vhEntry{0.3b}{2015-05-02}{HaaTa}{Adding Media Keys and Null Key}
 	\vhEntry{0.3c}{2014-12-31}{HaaTa}{Adding LED Indicator subsection}
-	\vhEntry{0.4}{2015-05-17}{HaaTa}{Adding key state scheduling}
+	\vhEntry{0.4}{2015-05-19}{HaaTa}{Adding key state scheduling}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -840,6 +840,22 @@ To press A after 20~ms, hold for 300~ms, then release 5~ms later.
 
 Implementations will most likely not support result macro stacking/queuing.
 If the timing is too long, any more triggers of the result macro will likely be ignored until the original trigger result completes.
+
+It is also possible to schedule capabilities as well.
+While capabilities will accept different states (Press, Hold, Release) the capability may ignore that specification depending on how it was implemented.
+The only part guaranteed is that at each scheduled event the capability will be called with the given state information.
+If a state is scheduled and the trigger input has an analog value (or other trigger specific value) associated with it that value will be discarded.
+This means that the output will no longer be analog and be handled as a toggle mechanism.
+
+\begin{lstlisting}
+# Defined capability
+myCapability => myCFunction( arg1:1, arg2:1 );
+
+# output specifies the analog/press result
+# Analog context is discarded
+<trigger> : myCapability( NULL, output )(P, H:300ms, R);
+<trigger> : myCapability( NULL, output )(100ms);
+\end{lstlisting}
 
 
 %%% File Format %%%
