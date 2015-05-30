@@ -1,0 +1,1270 @@
+\documentclass{kiibohd-template}
+
+\begin{document}
+
+
+%% General Notes and Guidelines when editing this document %% XXX <---
+ %  - To say this calmly, ONE SENTENCE PER LINE, no exceptions.
+ %  - If you want to use a table, there is a table macro
+ %  - If you want to include a diagram/figure/picture, there is a macro for that
+ %  - Use \todo and \todo[inline] to indicate TODOs
+ %  - Use LaTex comments to indicate formatting and tricky LaTex usage
+ %  - XXX indicates something to take note of (it highlights in many text editors, as does TODO)
+ %  - FIXME is another highlighting tag :D
+
+
+\title{KLL Spec v0.5}
+\titlename{Keyboard Layout Language Spec}
+\author{HaaTa - Jacob Alexander}
+\email{haata@kiibohd.com}
+\docrev{DRAFT - 0.5}
+\urlname{kiibohd.com}
+
+%%% Titlepage %%%
+\maketitle
+
+
+%%% Revision History %%%
+\begin{versionhistory}
+	\vhEntry{0.1}{2014-05-10}{HaaTa}{Initial Draft}
+	\vhEntry{0.2}{2014-05-11}{HaaTa}{Finished trigger section}
+	\vhEntry{0.2a}{2014-05-15}{HaaTa}{Finished result section}
+	\vhEntry{0.2b}{2014-05-17}{HaaTa}{Initial pass at USB Code Table}
+	\vhEntry{0.2c}{2014-05-18}{HaaTa}{Finished USB Code Table}
+	\vhEntry{0.3}{2014-09-07}{HaaTa}{Initial KLL implementation}
+	\vhEntry{0.3a}{2014-11-21}{HaaTa}{Adding Defines}
+	\vhEntry{0.3b}{2015-05-02}{HaaTa}{Adding Media Keys and Null Key}
+	\vhEntry{0.3c}{2014-12-31}{HaaTa}{Adding LED Indicator subsection}
+	\vhEntry{0.4}{2015-05-19}{HaaTa}{Adding key state scheduling}
+	\vhEntry{0.5}{2015-05-26}{HaaTa}{Adding Pixel Output Control}
+\end{versionhistory}
+
+%%% Tables %%%
+\printtables
+
+%%% Summary %%%
+\chapter{Summary}
+
+This document outlines a complex keymapping scheme for custom keyboard firmware.
+It is based upon the concept of trigger:result pairs and ways to configure both parts of the pair (input and output).
+A variety of macros are supported along with analog keyswitches.
+
+In addition, this keymapping scheme supports static and dynamic layering as well as supporting arbitrary keyboard features that may or may not be available on a given keyboard.
+
+
+%%% Scope %%%
+\chapter{Scope}
+
+Hardware keymappings for keyboards traditionally has been cumbersome.
+At best, each layer can be defined as a set of predefined trigger:result pairs.
+A trigger being a key and a result being a key press (e.g. USB Code).
+Some keyboards allow for macros; however, these macros usually have to be custom programmed to the microcontroller (most, if not all custom keyboard firmware), or have very limited scope (Kinesis Advantage Pro and some Cherry POS keyboards such as the G80-8200).
+
+Secondly, keymap layering (e.g. FN Layer) almost universally supports distinct layers (in the firmware that support this).
+However, no current firmware support "partial layering".
+Partial layering is only modifying a part of the current layout, similar to how XKB handles remapping Ctrl and CapsLock.
+
+To reduce size constraints, EEPROM storage of keyboard layouts will not be considered.
+It may be possible to do post compilation keymap modifications, but this is considered optional for an implementation.
+
+Finally, as of current (2015-05-10), no keymapping mechanism supports analog keyswitches for use in typing.
+This is mostly lack of availability of analog keyboard switches.
+
+
+%%% Variables %%%
+\chapter{Variables}
+
+Variables serve two purposes.
+The first, to give information to the compiler both for informational and controlling internal keyboard firmware features.
+The second is for keymapping convenience.
+In most cases variables will only be used for compiler information.
+
+Variables used for non-compiler purposes must be integers.
+The compiler will enforce this.
+
+Variables are defined as follows.
+
+\begin{lstlisting}
+<variable name> = <contents>;
+\end{lstlisting}
+
+Each command ends with a semi colon, there are no exceptions to this.
+Every keymap file will have the following variable.
+
+\begin{lstlisting}
+Name = myKeymapFile;
+\end{lstlisting}
+
+If spaces are required for either the variable name or variable contents, doubles quotes may be used.
+The spaces will be internally converted to underscores if the variable is used for non-informational purposes.
+Variable names can only use A-Z, a-z, 0-9 and underscores and must not start with a number.
+
+\begin{lstlisting}
+"space containing variable" = "space-ful variable";
+mix = "And Match";
+\end{lstlisting}
+
+
+ %% Defines %%
+\section{Defines}
+\label{sec:Defines}
+
+Defines are a special case of variables that are used to influence static configuration options of the keyboard.
+This allows information to be given to the keyboard firmware before it is compiled.
+For example, defining the word size of the macro definition (i.e. using 8 bit instead of 32 bit when only 256 positions are required).
+
+Defines are set the same way as variables are.
+However, and additional configuration is required to indicate which variables set defines for the compiled firmware.
+This help save the user from not setting critical defines that the firmware requires as warning messages are generated by the compiler when they are missing.
+
+\begin{lstlisting}
+<capability name> => <corresponding C/C++ define>;
+\end{lstlisting}
+
+Each keyboard will likely have a different set of configurable defines which will be exposed.
+By default, they will have set values; however, these values can be overridden.
+
+\begin{lstlisting}
+# Define declaration
+myDefine => myCDefine;
+
+# Default value
+myDefine = 23;
+
+# Override
+myDefine = 144;
+\end{lstlisting}
+
+In order to pass strings, the desired quotes must be double-quoted.
+
+\begin{lstlisting}
+myDefine => myCDefine;
+
+# Correct
+myDefine = '"This is a good string"';
+
+# Possibly incorrect
+myDefine = "This is an iffy string";
+\end{lstlisting}
+
+The second variable assignment will not pass the double quotes to the generated file so the result will not be interpreted as a C-String by the C/C++ compiler.
+
+
+%%% Capabilities %%%
+\chapter{Capabilities}
+\label{chpt:Capabilities}
+
+Capabilities define what the keyboard can do.
+At basic level, each keyboard has the capability to send USB Codes.
+Some keyboards have solenoids that can be fired, others have clickers.
+Capabilities are read by the compiler to cross-reference the functions that control that capability to the designated key press.
+
+If a capability is specified as a result to a keypress and is not defined for the specified keyboard, it is ignored and removed from the compiled keyboard mappings (for each of the layers it is defined on).
+
+In general, capabilities specific to each keyboard are defined in the keyboard specific Scan Code to USB Code keymap.
+Capabilities such as clickers and solenoids are defined using a standard so that their functionality does not have to be redefined for each keymap (i.e. keymaps are transferable between keyboards even with special functionality that does not apply to every keyboard).
+
+Capabilities are defined as follows.
+
+\begin{lstlisting}
+<capability name> => <corresponding C/C++ function>;
+\end{lstlisting}
+
+The arguments of the C/C++ function must be specified, but not defined.
+Capabilities are used to describe to both the compiler and user, what the special functionality is supposed to do.
+The argument names themselves should be descriptive names containing no spaces, start with a letter and may use a-z, A-Z, 0-9 and underscore.
+The colon after each argument specifies the byte length of the argument.
+This number must be an positive integer.
+
+Capabilities have two implied arguments, state and state type.
+These arguments are set by the TriggerMacro that signaled this Capability.
+
+\begin{lstlisting}
+# Correct
+myCapability => myCFunction( arg1:1, arg2:2 );
+
+# Incorrect, defines the arg2 as 25
+yourCapability => myCFunction( arg1:1, 25:2 );
+\end{lstlisting}
+
+Refer to Section \ref{chpt:CapabilitiesTable} for a list of common capabilities.
+
+
+%%% Keymapping %%%
+\chapter{Keymapping}
+
+Keymapping is the main purpose of KLL.
+KLL is designed to deal with most kinds of macros and layering (in addition to keyboard specific functions).
+
+Keymapping is defined in two parts.
+The first part is call the trigger.
+The trigger defines what the signal of a keypress (e.g. press a) is that will be used to generate a result (e.g. send USB Code a).
+Triggers can be simple or very complex.
+Defined as Scan Codes (non-portable) and USB Codes (portable).
+
+The second part is called a result.
+The result is what the keyboard firmware is designated to do once the corresponding trigger is received.
+Results vary from sending single USB Codes, to USB Code Macros, to enabling keyboard specific capabilities and toggling other keymapped layers.
+Defined as USB Codes and Capabilities.
+If an undefined Capability is used it is ignored and the trigger:result pair is removed from the keymap.
+
+As a note, time based key sequences (e.g. entering keys within a specified period of time) are not supported for both the trigger and result mechanisms.
+These may be added in a future version of KLL if enough demand (and a sensible/scalable implementation is proposed).
+
+The following is the general syntax of the trigger:result pair.
+
+\begin{lstlisting}
+<trigger> : <result>;
+\end{lstlisting}
+
+There are three variants of the trigger:result pair.
+Depending on which variant is used, assignment of the result changes.
+
+\begin{lstlisting}
+<trigger> :  <result>; # Replaces results on trigger
+<trigger> :+ <result>; # Adds results to trigger
+<trigger> :- <result>; # Removes result from trigger
+\end{lstlisting}
+
+In general, the normal trigger:result pair will be used to replace/change keymapping.
+An adding trigger:+result pair is useful when adding an extra action to a key of macro of keys (e.g. solenoid press).
+An subtraction trigger:-result pair is useful when compiling in many layouts and there are certain additions that are undesirable.
+
+
+%% Trigger
+\section{Trigger}
+
+The trigger defines the conditions required for a specific keymapping.
+These conditions can be as simple as a single key press or as complex as sequences of key combinations.
+
+A trigger is defined for each type of source.
+For a keyboard, the source types are Scan Codes and USB Codes.
+Other types of source types include axis control (mouse), rotation control (mouse wheel), indicator codes (keyboard lock lights).
+
+Beyond this, it is possible to specify ranges of sources to do the same function.
+Require a sequence of sources entered to enable a function.
+Use a combination of sources to trigger a capability.
+
+For each type of source a state may be used to control what the trigger of the source is.
+With analog switches it's possible to define a percentage value threshold for a key.
+
+Precedence is evaluated as follows: Scan Code/USB Code/Source then range, then combination and finally sequence.
+Ranges of combinations does not make sense, nor does combinations of sequences.
+
+
+% Sources
+\subsection{Sources}
+
+A source is a control interface that generates a change in state that, using a measure or threshold that can trigger an event.
+For keyboards, Scan Codes are native identifiers to the keyboard firmware.
+Whereas USB Codes are the identifiers used to send over USB to the OS.
+After compilation, all keymappings are mapped to Scan Codes; however, using Scan Codes in keymap files is not portable between different keyboards so their use is discouraged outside of defining the default Scan Code to USB Code keymap.
+
+Logical mappings are not used for other types of control such as axis control, rotation control and indicator codes.
+
+
+% Scan Code
+\subsection{Scan Code}
+\label{subsec:Scan_Code}
+
+Scan Codes are the native identifier for keypresses on keyboard firmware.
+In general, Scan Codes should not be used for defining keymaps; however, they are required for defining the initial Scan Code to USB Code mapping for each keyboard.
+
+Each trigger must identify whether it is a Scan Code or USB Code.
+For Scan Codes it is prefixed with an S.
+
+\begin{lstlisting}
+S<Scan Code> : <result>;
+\end{lstlisting}
+
+Scan Codes can be defined as either hex or decimal numbers.
+
+\begin{lstlisting}
+S0x2A : <result>;
+S124  : <result>;
+\end{lstlisting}
+
+The compiler will error if it is specified in the keymap explicitly.
+
+
+% State Scheduling
+\subsubsection{State Scheduling}
+\label{subsubsec:ScanCodeStateScheduling}
+
+Instead of processing the trigger immediately, as done by default, it is also possible to put additional state conditions on the keypress.
+Keyswitch trigger events have 6 different states that can be specified: press (\textbf{P}), hold (\textbf{H}), release (\textbf{R}), off (\textbf{O}), unique press (\textbf{UP}) and unique release (\textbf{UR}).
+State conditions are defined using parenthesis after the keyswitch definition.
+
+The press event is the default schedule event for keyswitches.
+The release event is useful for signalling an event after the key has been released rather than when it was pressed.
+Unique press is a special state that requires no other keyswitch is currently in the press or hold state.
+Unique release is another special state requiring no additional keypresses since this key was pressed.
+This is often referred to as "tap" keys.
+
+\begin{lstlisting}
+S100     : <result>;
+S100(P)  : <result>; # Same as above
+S101(UP) : <result>; # Tap key
+S102(UR) : <result>; # Single key input
+S103(R)  : <result>; # Single-shot on release
+\end{lstlisting}
+
+Hold and off are non-triggering events so they cannot be used to trigger results alone.
+This means they \textbf{must} be part of a combination with a triggering event (see Section \ref{subsec:Combination}).
+
+\begin{lstlisting}
+S104(H)           : <result>; # Incorrect
+S104(H) + S105(O) : <result>; # Incorrect
+S100 + S104(H)    : <result>; # Correct, holding a key
+S101 + S105(O)    : <result>; # Correct, key is not pressed
+\end{lstlisting}
+
+
+% USB Code
+\subsection{USB Code}
+\label{subsec:USB_Code}
+
+USB Codes define how USB understands keyboard output press/release events and are defined by the USB HID Spec.
+USB Codes are the recommend identifier when defining triggers for KLL keymaps.
+
+Each trigger must identify whether it is a Scan Code or USB Code.
+For USB Codes it is prefixed with a U.
+
+\begin{lstlisting}
+U<USB Code> : <result>;
+\end{lstlisting}
+
+USB Codes can be defined in a number of ways.
+Like Scan Codes, the USB Code can be defined directly using hex or decimal numbers (not recommended).
+The recommended way is to use the descriptive names for the USB Codes.
+Descriptive names are always strings, and must be enclosed with double quotes.
+
+\begin{lstlisting}
+U0x2A : <result>;
+U124  : <result>;
+U"A"  : <result>;
+U"a"  : <result>; # Same as previous
+\end{lstlisting}
+
+Refer to Section \ref{chpt:USBCodeTable} for the complete list of USB Codes.
+
+There is an important difference when using a USB Code as the the Trigger as compared to a Scan Code.
+When an assignment is done using a USB Code, a lookup must occur to find the original Scan Code that the USB Code was assigned to.
+Since assignment order matters this can become confusing.
+
+\begin{lstlisting}
+U"s" : U"r";
+U"r" : U"p";
+\end{lstlisting}
+
+This has an unintended side-effect.
+All R's will be assigned to P.
+If the user is aware, the problem isn't too bad to deal with.
+However, this is a very tricky problem to deal with for GUI keymap programs as it is not intuitive to enforce order.
+
+Therefore, to resolve this issue, all assignments using a USB Code trigger must be cached until the current kll file has finished parsing.
+Then the cached assignments can be applied to the current layer.
+This will allow mass assignment of keys without having to worry about the order of assignment.
+If re-assignment is needed, use another kll file or a Scan Code trigger.
+
+
+% State Scheduling
+\subsubsection{State Scheduling}
+\label{subsubsec:trigusbstateschedule}
+
+All of state schedulers used for Scan Code triggers are applicable for USB Code triggers (see Section \ref{subsubsec:ScanCodeStateScheduling}).
+
+\begin{lstlisting}
+U"A"           : <result>;
+U"A"           : <result>; # Same as above
+U"B"(UP)       : <result>; # Tap key
+U"C"(UR)       : <result>; # Single key input
+U"D"(R)        : <result>; # Single-shot on release
+U"A" + U"Q"(H) : <result>; # Correct, holding a key
+U"B" + U"W"(O) : <result>; # Correct, key is not pressed
+\end{lstlisting}
+
+
+% Button Code
+%\subsubsection{Button Code}
+% TODO
+% B[<num>]
+
+
+% Linear Code
+%\subsubsection{Linear Code}
+% TODO - Use +/- for relative state
+% L[<num>]
+
+
+% Rotation Code
+%\subsubsection{Rotation Code}
+% TODO - Use +/- for relative state
+% R[<num>]
+
+
+% Analog
+\subsubsection{Analog States}
+
+For analog keyboard switches, it is useful to specify a trigger at a press percentage as press/release behaviour needs to be defined.
+The expected implementation defines a press when the key stops moving or begins to move back up.
+If a stopped key moves further down (past the next trigger), stops or begins to move back up the next trigger is used and the previous on is released.
+Again, if the stopped key moves back up going back over a past trigger, stops (or with a slight delay before going back up further) this past trigger will activate, releasing the previous trigger.
+
+Analog triggers are specified using parenthesis.
+
+\begin{lstlisting}
+<Code>(<Analog Value>) : <result>;
+\end{lstlisting}
+
+Both USB Codes and Scan Codes can be used with analog keyboards signals.
+Mapping analog triggers gets more tricky, so it is recommended that they are only used with USB Codes.
+Analog triggers are specified from 0 to 100 using integers only.
+0 is a special case and is only pulsed when it is reached rather than held.
+
+\begin{lstlisting}
+S0x2A(10) : <result>; # 10% press
+S0x2A(80) : <result>; # 80% press
+U124 (50) : <result>; # 50% press
+U"A"  (0) : <result>; #  0% pulse
+U"a" (52) : <result>; # 52% press
+\end{lstlisting}
+
+If the keyboard is not analog, any trigger with an analog trigger will be ignored.
+And inversely, if the Scan Code/USB Code maps to an analog key, a normal press/release trigger will be ignored.
+
+
+% LED Indicator Code
+\subsection{LED Indicator Code}
+\label{subsec:LED_Indicator_Code}
+
+Instead of using a keypress as the trigger to a macro, it is also possible to use the state of a HID LED Indicator such as Caps Lock.
+
+\begin{lstlisting}
+I<Indicator Code> : <result>;
+\end{lstlisting}
+
+Indicator codes can be specified using a numeric or string identifier.
+
+\begin{lstlisting}
+U"a" + I2         : <result>; # a + CapsLock
+U"a" + I0x3       : <result>; # a + ScrollLock
+U"a" + I"NumLock" : <result>; # a + NumLock
+\end{lstlisting}
+
+Refer to Section \ref{chpt:LEDIndicatorCodeTable} for the complete list of LED Indicator Codes.
+
+
+% State Scheduling
+\subsubsection{State Scheduling}
+
+Similar to keypresses, indicator codes have four states: activate (\textbf{A}), on (\textbf{On}), deactivate (\textbf{D}) and off (\textbf{Off}).
+Also similar to keypresses, on and off cannot be used to trigger a macro.
+While activate and deactivate can be used as a trigger to a macro.
+The default state for LED Indicator codes is activate.
+
+\begin{lstlisting}
+I"NumLock"    : <result>;
+I"NumLock"(A) : <result>; # Same as above
+I"NumLock"(D) : <result>; # NumLock disable
+\end{lstlisting}
+
+The on and off states must be specified with another trigger as they are non-trigger conditions.
+
+\begin{lstlisting}
+I"NumLock"(On) + U"c"  : <result>; # Correct
+U"a" + I"NumLock"(Off) : <result>; # Correct
+I"NumLock"(Off)        : <result>; # Incorrect
+I"NumLock"(On), U"d"   : <result>; # Incorrect
+\end{lstlisting}
+
+Keep in mind that the LED Indicator Codes are controlled by the host OS and not by the keyboard.
+There is always the chance that the OS tries to do something strange with the LEDs that may not match what the OS itself is doing (i.e. CapsLock led is off, but all keys are outputing as caps).
+In this case there is really nothing the keyboard can do to right itself.
+
+
+% Range
+\subsection{Range}
+
+For convenience, it is also possible to define a range of triggers rather than explicitly defining each of the trigger:result pairs.
+This is useful for defining things such as using the clicker speaker for every single key or just the letter keys.
+
+Ranges are defined as the numerical range of either USB Codes or Scan Codes (use not recommended).
+Fortunately this means ranges such as A-Z will work has USB HID defines the USB Codes in order.
+Unfortunately the range 0-9 will not work as the USB Codes are organized: 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 just like on a keyboard.
+To assist with this problem, the compiler will warn when this case occurred.
+Forward and reverse ranges are possible.
+There is no wrap-around.
+Scan Codes and USB Codes cannot be mixed.
+
+To define a range, two additional pieces of syntax are required: square brackets and range specifier.
+
+\begin{lstlisting}
+S[0x2A-0x50] : <result>;
+S[12-43]     : <result>;
+S[69]        : <result>; # Also a valid definition
+U[124-43]    : <result>; # Reverse range
+U["A"-"Z"]   : <result>;
+U["0"-"9"]   : <result>; # Compiler will warn, only 0 and 9
+U["1"-"0"]   : <result>; # Correct definition of 0-9
+\end{lstlisting}
+
+In addition to a specific range, multiple single keys or ranges may also be specified.
+
+\begin{lstlisting}
+S[0x2A-0x50, 0x5]   : <result>;
+S[12, 43]           : <result>;
+U["A"-"Z", "Enter"] : <result>;
+\end{lstlisting}
+
+When using an analog supporting keyboard, a range is specified to that specific range.
+Or the analog trigger can be specified for the entire range.
+
+\begin{lstlisting}
+S[0x2A-0x50(20), 0x5(56)] : <result>;
+S[12, 43](79)             : <result>;
+U["A"-"Z"(42),"Tab"](30)  : <result>; # 30, unless specified
+\end{lstlisting}
+
+
+% Sequence
+\subsection{Sequence}
+\label{subsec:Sequence}
+
+Sequences are a type of macro.
+A sequence is a set of expected inputs that must happen in order with no extra inputs of non-defined inputs.
+If a non-defined input is found, the sequence is reset and waits for the first input in the sequence again.
+Sequences cannot mix Scan Codes and USB Codes.
+
+Trigger inputs in the sequence are separated by commas.
+The Scan Codes and USB Codes are evaluated/expanded first, then the sequences are evaluated (Codes have higher precedence).
+
+\begin{lstlisting}
+S[0x2A-0x50], S[12], U[5]           : <result>;
+U["Q"-"Y"], U["Enter"]              : <result>;
+U["A"-"Z"(42),"Tab"](30), U[12](53) : <result>;
+\end{lstlisting}
+
+Analog triggers cannot be set across multiple inputs in the sequence.
+
+For convenience, a second sequence syntax is available only for specifying ASCII characters.
+This allows for sentences to be inputted rather than the individual USB Codes.
+The key difference is the use of single quotes.
+If a shift is required for the specific key, it will be added as a combination (see Section \ref{subsec:Combination}).
+
+\begin{lstlisting}
+'abc'                       : <result>;
+U'T'                        : <result>;
+U['Can you type this?'](23) : <result>;
+\end{lstlisting}
+
+Single quotes are only used for sentence expansion, they cannot be used for strings.
+
+
+% Combination
+\subsection{Combination}
+\label{subsec:Combination}
+
+Combinations are a type of macro.
+A combination is a set of inputs pressed at the same time.
+For example: Ctrl+Alt+Delete.
+In order for a combination trigger to be signalled all of the keys must be pressed.
+The combination will not end if a key is missing from the combination (as the user may not have pressed it yet).
+Extra keys not part of the combination also do not cancel the combination.
+Combinations cannot mix Scan Codes and USB Codes.
+
+Trigger inputs in the combination are separated by pluses.
+The Scan Codes and USB Codes are evaluated/expanded first, then sequences are evaluated and finally combinations (Codes have the highest precedence, then sequences, then combinations).
+
+\begin{lstlisting}
+U["Q"-"Y"] + U["Enter"]              : <result>;
+S[0x2A-0x50] + S[12], U[5]           : <result>;
+U["A"-"Z"(42),"Tab"](30) + U[12](53) : <result>;
+'Can you type this?'(23) + 'a'(43)   : <result>;
+\end{lstlisting}
+
+Analog triggers cannot be set across multiple inputs in the combination.
+
+
+% Timing
+\subsection{Timing}
+\label{subsec:trigtiming}
+
+It is possible to assign a time to a given trigger.
+This allows for sophisticated time based input sequences.
+
+The granularity of the fundamental time base depends on the hardware.
+This time base is advertised by the underlying hardware to the KLL compiler using the \textbf{timeBase} define.
+
+The following are the accepted time units.
+\begin{itemize}
+	\item \textbf{s} - Seconds
+	\item \textbf{ms} - Milliseconds
+	\item \textbf{us} - Microseconds
+	\item None - Fundamental unit
+\end{itemize}
+
+Fractional numbers are also valid (e.g. 1.43~s).
+If the number will be rounded to the nearest fundamental time unit.
+Avoid using the fundamental time unit directly as it will not behave the same way between different keyboards.
+
+The format is as follows.
+
+\begin{lstlisting}
+<identifier>([<state scheduler>][:<time>]) : <result>;
+\end{lstlisting}
+
+To press A then release after 300~ms.
+
+\begin{lstlisting}
+U"a"(300ms)   : <result>;
+U"a"(P:300ms) : <result>; # Same
+\end{lstlisting}
+
+More complicated state scheduling is also possible.
+Press timers may be used to have combos that require a key pressed first then after a certain amount of time another key must be pressed, which then completes the element in the sequence.
+
+\begin{lstlisting}
+U"a" + U"b"(P:1s) : <result>; # Press B after 1s
+U"a" + U"b"(H:1s) : <result>; # Invalid, cannot track B time
+\end{lstlisting}
+
+Non-trigger events cannot be used with a time specifier.
+This includes: \textbf{On}, \textbf{Off} and \textbf{Hold}.
+Hold can only be used when using multiple time triggers.
+
+Multiple time triggers may be used to define more complex input sequences.
+For example, to press A, require a wait time of 50~ms then hold for at least 100~ms, but no longer than 200~ms.
+
+\begin{lstlisting}
+U"a" + U"b"(P:50ms,H:100ms,R:200ms);
+\end{lstlisting}
+
+
+%% Result
+\section{Result}
+
+The result is the action, or set of actions, after the conditions for the trigger have been satisfied.
+The result can be as simple as a single USB Code output or as complex as signalling a keyboard specific clicker and outputting a combinational macro.
+A Scan Code cannot be used as a result.
+
+Like triggers, there are two basic types of results: keyboard specific functionality and USB Codes.
+Both of these results are referred to as capabilities.
+A basic capability of every keyboard is to send USB Codes, while other keyboards may have other capabilities such FN layers or clickers.
+When a trigger is satisfied each of the results assigned to this trigger are signalled.
+
+Much of the syntax is the same as with triggers.
+The major difference being, no analog qualifiers and no ranges.
+Some state scheduling qualifiers also may not apply in all situations, if at all.
+
+
+% USB Code
+\subsection{USB Code}
+
+USB Codes are the primary use of the result part of the trigger:result pairs.
+Result USB Codes are defined the same way as trigger USB Codes (Section \ref{subsec:USB_Code}).
+
+\begin{lstlisting}
+<trigger> : U0x2A;
+<trigger> : U124;
+<trigger> : U"A";
+<trigger> : U"a"; # Same as previous
+\end{lstlisting}
+
+Refer to Section \ref{chpt:USBCodeTable} for the complete list of USB Codes.
+
+
+% State Scheduling
+\subsubsection{State Scheduling}
+\label{subsubsec:resultusbcodestateschedule}
+
+It is also possible to schedule output sequences just as with USB Code triggers (see Section \ref{subsubsec:trigusbstateschedule}).
+Result USB Codes have three scheduling types: press (\textbf{P}), hold (\textbf{H}) and release (\textbf{R}).
+Off, unique press and unique release have no meaning for output and therefore are not available.
+The hold state can only be used with a timing specifier (see Section \ref{subsec:resulttiming}).
+
+By default, the press specifier is used and the key is released before the next sequence element and/or the end of the sequence.
+
+\begin{lstlisting}
+<trigger> : U"A";
+<trigger> : U"A"(P,R); # Same as previous
+<trigger> : U"A"(P), U"A"(R);
+<trigger> : U"A"(P); # Does not release a
+<trigger> : U"A"(R); # Only releases a if active/pressed
+\end{lstlisting}
+
+
+% None
+\subsection{None}
+
+Sometimes it is useful to block the fall-through to a previous layer and have the key do nothing.
+The \textbf{None} keyword is case sensitive.
+
+\begin{lstlisting}
+<trigger> : None;
+\end{lstlisting}
+
+
+% Consumer Control Code
+\subsection{Consumer Control Code}
+
+Consumer Control Codes, or Media Keys are a USB HID control type that allows you to control media functions.
+These include global hotkeys such as Play, Next and Previous.
+
+Similar to USB Codes (Section \ref{subsec:USB_Code}), Consumer Control Codes can be defined as numbers or by its symbolic name.
+It is important to note that there is no support for sequences, combinations or ranges of Consumer Control Codes.
+
+\begin{lstlisting}
+<trigger> : CON0xB0;
+<trigger> : CON176;
+<trigger> : CON"Play";
+<trigger> : CON"play"; # Same as previous
+\end{lstlisting}
+
+Refer to Section \ref{chpt:ConsCodeTable} for the complete list of Consumer Control Codes.
+
+Consumer Control Codes may also use state scheduling. See Section \ref{subsubsec:resultusbcodestateschedule} for usage details.
+
+
+% System Control Code
+\subsection{System Control Code}
+
+System Control Codes are a USB HID control type that allows you to system level functions.
+These include global hotkeys such as Power, Sleep and Eject.
+
+Similar to USB Codes (Section \ref{subsec:USB_Code}), System Control Codes can be defined as numbers or by its symbolic name.
+It is important to note that there is no support for sequences, combinations or ranges of System Control Codes.
+
+\begin{lstlisting}
+<trigger> : SYS0x82;
+<trigger> : SYS130;
+<trigger> : SYS"Sleep";
+<trigger> : SYS"sleep"; # Same as previous
+\end{lstlisting}
+
+Refer to Section \ref{chpt:SysCodeTable} for the complete list of System Control Codes.
+
+System Control Codes may also use state scheduling. See Section \ref{subsubsec:resultusbcodestateschedule} for usage details.
+
+
+% Sequence
+\subsection{Sequence}
+
+A result sequence is a series of outputted USB Codes which are split between each USB output buffer refresh.
+This is similar to a trigger input sequence.
+The syntax is the same as trigger sequences (Section \ref{subsec:Sequence}.
+
+\begin{lstlisting}
+<trigger> : U["Q"-"Y"], U["Enter"];
+<trigger> : U["A"-"Z","Tab"], U[12];
+\end{lstlisting}
+
+Single quoted strings will be literally evaluated.
+Any characters requiring a Shift key will have it added as a combination as part of the result.
+
+\begin{lstlisting}
+<trigger> : 'abc';
+<trigger> : U'T';
+<trigger> : U['Can you type this?'];
+\end{lstlisting}
+
+
+% Combination
+\subsection{Combination}
+
+A result combination is a set of keys sent out during the same USB output buffer.
+The syntax is the same as trigger combinations (Section \ref{subsec:Combination}.
+Keep in mind, if the keyboard does not support NKRO then some result combinations will not be possible.
+
+\begin{lstlisting}
+<trigger> : U["Q"-"Y"] + U["Enter"];
+<trigger> : U["A"-"Z","Tab"] + U[12];
+<trigger> : 'Can you type this?' + 'a';
+\end{lstlisting}
+
+
+% Capability
+\subsection{Capability}
+
+In addition to outputting USB Codes, capabilities can be triggered.
+Technically, outputting USB Codes is a capability of the keyboard, but it is always considered to exist.
+If a capability is specified as a result, but is not available for that keyboard, the trigger:result pair is ignored by the compiler and removed from the keymap.
+
+To specify a capability as the result, define the capability name and any arguments required for the capability.
+To use the default parameter for an argument, set the argument as NULL.
+
+\begin{lstlisting}
+# Defined capability
+myCapability => myCFunction( arg1:1, arg2:1 );
+
+# Using default first argument, and 25 for the second
+<trigger> : myCapability( NULL, 25 );
+\end{lstlisting}
+
+To specify one of the arguments as the analog/press (press, hold, release) variable from the trigger, specify the argument as "output".
+
+\begin{lstlisting}
+# Defined capability
+myCapability => myCFunction( arg1:1, arg2:1 );
+
+# output specifies the analog/press result
+<trigger> : myCapability( NULL, output );
+\end{lstlisting}
+
+Refer to Section \ref{chpt:CapabilitiesTable} for a list of common capabilities.
+
+
+% Timing
+\subsection{Timing}
+\label{subsec:resulttiming}
+
+Similar to triggers, timing may also be used for sophisticated output sequences.
+See Section \ref{subsec:trigtiming} for detailed background on timing units and fundamental time steps.
+
+The format is as follows.
+\begin{lstlisting}
+<trigger> : <identifier>([<state scheduler][:][<time>]);
+\end{lstlisting}
+
+To press A for 300~ms.
+
+\begin{lstlisting}
+<trigger> : U"a"(300ms);
+<trigger> : U"a"(P,H:300ms,R); # Same as above
+\end{lstlisting}
+
+To press A after 20~ms, hold for 300~ms, then release 5~ms later.
+
+\begin{lstlisting}
+<trigger> : U"a"(P:20ms,H:300ms,R:5ms);
+\end{lstlisting}
+
+Implementations will most likely not support result macro stacking/queuing.
+If the timing is too long, any more triggers of the result macro will likely be ignored until the original trigger result completes.
+
+It is also possible to schedule capabilities as well.
+While capabilities will accept different states (Press, Hold, Release) the capability may ignore that specification depending on how it was implemented.
+The only part guaranteed is that at each scheduled event the capability will be called with the given state information.
+If a state is scheduled and the trigger input has an analog value (or other trigger specific value) associated with it that value will be discarded.
+This means that the output will no longer be analog and be handled as a toggle mechanism.
+
+\begin{lstlisting}
+# Defined capability
+myCapability => myCFunction( arg1:1, arg2:1 );
+
+# output specifies the analog/press result
+# Analog context is discarded
+<trigger> : myCapability( NULL, output )(P, H:300ms, R);
+<trigger> : myCapability( NULL, output )(100ms);
+\end{lstlisting}
+
+
+%%% File Format %%%
+\chapter{File Format}
+
+The Keyboard Layout Language or KLL uses a series of plain text, readable files to define configurations.
+This does not preclude GUI keymapping tools as it can generate KLL files first.
+
+Each file represents a single keymapping layer and it is up the firmware configuration to define the precedence of each layer.
+KLL uses the concept of "Capabilities" to define potential results of a keypress (Section \ref{chpt:Capabilities}).
+At a basic level these are the keycodes (USB Codes) sent out to USB, but can be things like a clicker speaker or special LED signals.
+
+
+%% Comments
+\section{Comments}
+
+End-of-line comments are defined using a '\#'.
+For example,
+
+\begin{lstlisting}
+# This is a comment
+Not a comment # But this is a comment
+\end{lstlisting}
+
+defines the two supported styles of comments.
+Block and inline comments are not supported.
+
+
+%% Required Variables
+\section{Required Variables}
+
+Each keymap file has a set of required variables that must be defined.
+
+\begin{lstlisting}
+# Name of the keymap
+Name = myKeymap; # Spaces will be replaced with _'s
+
+# Version of the keymap
+Version = 1.32a-HaaTa;
+
+# Modified Date
+Date = 2014-05-10;
+
+# Author
+# Multiple authors should be comma separated with the year
+#  range of their contributions
+# Quotes can be used if spaces are required.
+Author = "HaaTa (Jacob Alexander) 2014";
+
+# KLL Version, used to detect future incompatibilities
+KLL = 0.1;
+\end{lstlisting}
+
+The \textbf{Name} and \textbf{KLL} variables are used by the KLL compiler.
+Name prefixed to all keymap specific capabilities (e.g. myKeymap\_Latch).
+KLL is for version checking to deal with future potential issues.
+
+The rest of the variables are just informational.
+But are to be propagated to combined keymaps.
+
+
+%% Layer Control
+\section{Layer Control}
+
+While up to the compiler how layers are controlled, these are some guidelines on how to control layers.
+Each layer must support three different activation types.
+
+\begin{itemize}
+	\item Shift - Enables keymap while held
+    \item Latch - Enables keymap until the next key is pressed
+    \item Lock - Enables keymap until Lock is pressed again
+\end{itemize}
+
+
+%% Example Keymap
+\section{Example Keymap}
+
+The following is a QWERTY/US ANSI to Colemak keymap.
+Only USB Codes are used as this is not a Scan Map.
+
+\begin{lstlisting}
+Name = colemak;
+Version = 0.1;
+Author = "HaaTa (Jacob Alexander) 2014";
+KLL = 0.2a;
+
+# Modified Date
+Date = 2014-05-17;
+
+# Top Row
+'e' : 'f';
+'r' : 'p';
+'t' : 'g';
+'y' : 'j';
+'u' : 'l';
+'i' : 'u';
+'o' : 'y';
+'p' : ';';
+
+# Middle Row
+'s' : 'r';
+'d' : 's';
+'f' : 't';
+'g' : 'd';
+'j' : 'n';
+'k' : 'e';
+'l' : 'i';
+';' : 'o';
+
+# Bottom Row
+'n' : 'k';
+\end{lstlisting}
+
+When remapping ASCII characters, using single quotes is the simplest way to map keys.
+Remember, all other keys must be remapped using either the USB Code or USB Code identifier.
+
+\begin{lstlisting}
+Name = capslock2ctrl;
+Version = 0.1;
+Author = "HaaTa (Jacob Alexander) 2014";
+KLL = 0.2a;
+
+# Modified Date
+Date = 2014-05-17;
+
+U["CapsLock"] : U["Ctrl"];
+\end{lstlisting}
+
+
+%%% Layering %%%
+\chapter{Layering}
+
+While the KLL files have little to do with the keymap layering implementation, there are a few features that do help with the implementation.
+In general, keymaps are defined by USB codes and not Scan Codes as Scan Codes are keyboard specific.
+However, for each keyboard an initial mapping must be defined from Scan Codes to USB Codes.
+
+After compilation, each keymap is reduced down to Scan Codes as they are the unambiguous internal key indications that keyboard firmwares understand.
+
+
+%% Scan Map
+\section{Scan Map}
+
+The Scan Map is the keymapping used to define each type of keyboard.
+This keymapping must used Scan Codes to USB Codes, otherwise later compilation process will fail (as it won't be possible to resolve the Scan Codes).
+
+If possible, each Scan Map should define a US ANSI-like keymap.
+Any keys that are not defined by the general US ANSI standard should be defined to another reasonable USB Code.
+
+The scan map should also define any capabilities that are provided by the keyboard.
+For example, a clicker speaker.
+
+\begin{lstlisting}
+# Clicker speaker with "sound select" and volume args
+myControlableClicker => clickerCFunction( sound:2, volume:1 );
+
+# Use the capability when Scan Code 0x2C is pressed
+# NULL specifies the default option of the capability
+S[0x2C] : myControlableClicker( NULL, 25 );
+\end{lstlisting}
+
+When defining capabilities like solenoids and clickers, follow the naming convention and same number of arguments.
+If there are extra capabilities for this keyboard (e.g. click volume), add an additional capability to control this functionality.
+
+Refer to Section \ref{chpt:CapabilitiesTable} for a list of common capabilities.
+
+
+%% Combined Map
+\section{Combined Map}
+
+The Combined Map is a set of keymaps that have been folded (or compiled) down to a single keymap.
+For example, if there is the default Scan Map and a Colemak keymap is specified, both of these keymaps will be compiled down to Scan Code triggers and the USB code results (as well as any other specified capabilities).
+For keys that were not specified in the secondary maps (the highest layered map takes precedence) it will use the lower layer keymapping to be included into the Combined Map.
+
+
+%% Partial Map
+\section{Partial Map}
+
+A Partial Map is a keymap that may not define every possible Scan Code.
+Some uses for Partial Maps are to swap Caps Lock and Control, or define Colemak, where not all of the keys change from QWERTY/US ANSI.
+Partial Maps can be used to generate a Combined Map or be compiled individually to be layered on the keyboard firmware dynamically for FN layers.
+
+
+%%% Pixel Output Control %%%
+\chapter{Pixel Output Control}
+
+Some keyboards have large arrays of pixel devices such as RGB backlighting or LCD displays.
+Pixel output control defines ways to specify animations and events directly using KLL without having to program custom capabilities.
+
+Instead of triggering individual pixels, events are characterized as animation groups.
+These animation groups can both a trigger and a result in order to link together animation groups with complex input sequences.
+
+   % TODO %
+% - Default parameters?
+% - Parameters
+% - USB Code/Scan Code locations
+% - Indexed locations
+% - Non USB/Scan Code locations
+% - Overwriting previous settings
+
+% - Protocol
+% * n channels per led
+% * Only use supported channels (rest should be compiled out/ignored)
+% * Each animation has m frames
+% * Clock divider setting for each animation
+% * Animation types (Single, k loops, infinite loop)
+% * Brightness per led
+% * Overall brightness
+% * Animation end as trigger
+% * Animation control capabilities
+% * Complex display support (Font support)
+
+
+%%% Compilation %%%
+\chapter{Compilation}
+
+Compilation is relatively simple.
+Reduce all triggers down to Scan Codes and all results into capabilities and USB Codes.
+To combine keymaps, they must be stacked during compilation.
+The first layout specified is the default.
+Each layout layered on top takes precedence over the layout underneath of it.
+
+There is no requirement to support online key remapping, EEPROM storage or post compilation key remapping (pre microcontroller flashing).
+
+Keys that are not mapped should be ignored and not present.
+Capabilities specified, but do not exist for a given keyboard are also ignored.
+
+Warnings should be given about ambiguous ranges or no keymappings/trigger:result pairs are mapped.
+
+Compilation should not succeed if there are missing mandatory variables or syntax problems.
+Additionally, there cannot be any duplicate capabilities defined, whether they are ignored or not.
+
+
+% USB Code Table
+\newpage
+\chapter{USB Code Table}
+\label{chpt:USBCodeTable}
+
+Following is a table of USB Codes.
+For each USB Code there is at least a long and short name.
+The names are case-insensitive.
+Some USB Codes have multiple names for convenience.
+Spaces and underscores both translate to underscore internally.
+
+Please refer to the USB Keyboard HID spec for more details.
+All event based key codes that do not correspond to a physical key are not included in the table.
+For example, USB Code 0x01, which is a rollover error indicator.
+
+Many USB Codes are recognized/implemented on the OS side.
+Do not expect lesser known USB Codes to "just work".
+
+\begin{ltable}{usbcodes}{ l | r | l }{Table of USB Codes}
+
+\textbf{USB Code} & \textbf{Name} & \textbf{Alternate Name(s)} \\
+\hline
+\hline
+
+\input{USBCodeTable} % See .tex file for data
+
+\end{ltable}
+
+As function keys are not part of the USB HID spec, they are difficult to reference using USB Codes.
+To get around this, KLL reserves USB Codes 0xF0 to 0xFF for function keys.
+It is possible (though unlikely) that a new USB HID spec may use this reserved space.
+In that case, a new revision of KLL will be made to address this issue.
+USB Codes 0xF0 to 0xFF are never sent via USB and are for internal processing only.
+
+It is possible to use any arbitrary USB Code as a function key.
+However, using something like a SysReq as your function key (in the default map) makes it unclear to other readers unless you explicitly comment this case in the .kll file.
+
+
+% System Control Code Table
+\newpage
+\chapter{System Control Code Table}
+\label{chpt:SysCodeTable}
+
+Following is a table of USB System Control Codes.
+These are useful for defining keys to signal the OS to power off, sleep or eject something.
+
+Please refer to the USB HID spec for more details.
+Do not expect your OS to recognize these codes.
+Many of them are system specific.
+
+\begin{ltable}{syscodes}{ l | r | l }{Table of System Control Codes}
+
+\textbf{Sys Code} & \textbf{Name} & \textbf{Alternate Name(s)} \\
+\hline
+\hline
+
+\input{SystemCodeTable} % See .tex file for data
+
+\end{ltable}
+
+
+% Consumer Control Code Table
+\newpage
+\chapter{Consumer Control Code Table}
+\label{chpt:ConsCodeTable}
+
+Following is a table of USB Consumer Control Codes.
+These are useful for defining media keys such as Next, Previous, Pause, etc.
+
+Please refer to the USB HID spec for more details.
+Do not expect your OS to recognize these codes.
+Many of them are system specific.
+
+\begin{ltable}{conscodes}{ l | r | l }{Table of Consumer Control Codes}
+
+\textbf{Cons Code} & \textbf{Name} & \textbf{Alternate Name(s)} \\
+\hline
+\hline
+
+\input{ConsumerCodeTable} % See .tex file for data
+
+\end{ltable}
+
+
+% LED Indicator Code Table
+\newpage
+\chapter{LED Indicator Code Table}
+\label{chpt:LEDIndicatorCodeTable}
+Following is a table LED Indicator Codes defined by the USB HID Spec.
+On most OSs only NumLock, ScrollLock and CapsLock are used.
+Even if the keyboard supports all of the LED Indicator Codes, unless the OS supports it, you will not be able to use it.
+
+For completeness, the entire table is listed here.
+
+\begin{ltable}{indicatorcodes}{ l | r | l }{Table of USB LED Indicator Codes}
+
+\textbf{Indicator Code} & \textbf{Name} & \textbf{Alternate Name(s)} \\
+\hline
+\hline
+
+\input{LEDIndicatorTable} % See .tex file for data
+
+\end{ltable}
+
+
+% Capabilities Table
+\newpage
+\chapter{Capabilities Table}
+\label{chpt:CapabilitiesTable}
+
+Following is a table of common capabilities.
+Whenever defining new capabilities, make sure to check this table to make sure there are no namespace clashes.
+The number beside each of the arguments specifies the size of the argument in bytes (e.g. 2 $\Rightarrow$ 16 bits).
+
+\begin{ltable}{capabilityTable}{ l | l | l }{Table of Common Capabilities}
+
+\textbf{Capability} & \textbf{Function} & \textbf{Argument(s)} \\
+\hline
+\hline
+
+\input{CapabilityTable} % See .tex file for data
+
+\end{ltable}
+
+
+%%% Glossary %%%
+\newpage
+\begin{fglossary}
+\begin{description}[itemsep=0em]
+
+\glossent{Fall-through}{When a key is undefined on a particular layer, the key definition on the previously stacked layer will be used. Eventually the key definition will be set to using the default layer. If the None keyword is used, then the fall-through will stop and no action will take place.}
+\glossent{Latch}{When referring to keyboards, a key function that is only enabled until the release of the next keypress.}
+\glossent{Lock}{When referring to keyboards, a key function that is enabled until that key is pressed again (e.g. Caps Lock).}
+\glossent{NKRO}{N-Key Rollover is the capability to press N number of keys at the same time on a keyboard and have them all register on the OS simultaneously.}
+\glossent{Scan Code}{Row x Column code or native protocol code used by the keyboard.}
+\glossent{Shift}{When referring to keyboards, a key function that is enabled while that key is held.}
+\glossent{USB Code}{Keyboard Press/Release codes as defined by the USB HID Spec.}
+
+\end{description}
+\end{fglossary}
+
+
+%%% TODO %%%
+\newpage
+\chapter{Future Considerations}
+
+Possible features for future revisions of the KLL spec.
+If the feature is in this list, there is no guarantee that it will be in the specified version series.
+
+\section{Possible 0.4+}
+
+\begin{itemize}
+\item Layer number symbolic naming
+\item Internal lock/state variables (Virtual States)
+\item Key ignore specifier during macro
+\item Result/Key "locking" (just like holding down a key until pressed again)
+\end{itemize}
+
+\section{Possible 0.5+}
+
+\begin{itemize}
+\item Mouse control
+\item Add capabilities descriptions
+\item LED/Pixel control with animation support
+\end{itemize}
+
+\section{Possible 0.6+}
+
+\begin{itemize}
+\item Joystick control
+\item Unicode output
+\item More concise way to indicate capability defaults
+\item Add field to change USB country code
+\item Analog velocity and acceleration detection (optional, depends on hardware)
+\item Add debounce time control
+\end{itemize}
+
+
+\end{document}
