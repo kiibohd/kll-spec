@@ -17,7 +17,7 @@
 \titlename{Keyboard Layout Language Spec}
 \author{HaaTa - Jacob Alexander}
 \email{haata@kiibohd.com}
-\docrev{0.4}
+\docrev{DRAFT - 0.4}
 \urlname{kiibohd.com}
 
 %%% Titlepage %%%
@@ -285,6 +285,18 @@ S124  : <result>;
 
 The compiler will error if it is specified in the keymap explicitly.
 
+For keyboards that are interconnect capable, it is possible to set the interconnect index for that keyboard.
+By default, a scan code is defined as index 0.
+This can be changed using the \textbf{ConnectId} variable.
+This variable is effective immediately.
+
+\begin{lstlisting}
+S0x2A : <result>; # Defaults to index 0
+ConnectId = 2;
+S0x2A : <result>; # Defaults to index 2
+S124  : <result>; # Also defaults to index 2
+\end{lstlisting}
+
 
 % State Scheduling
 \subsubsection{State Scheduling}
@@ -375,7 +387,7 @@ All of state schedulers used for Scan Code triggers are applicable for USB Code 
 
 \begin{lstlisting}
 U"A"           : <result>;
-U"A"           : <result>; # Same as above
+U"A"(P)        : <result>; # Same as above
 U"B"(UP)       : <result>; # Tap key
 U"C"(UR)       : <result>; # Single key input
 U"D"(R)        : <result>; # Single-shot on release
