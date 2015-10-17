@@ -13,11 +13,11 @@
  %  - FIXME is another highlighting tag :D
 
 
-\title{KLL Spec v0.3b}
+\title{KLL Spec v0.3d}
 \titlename{Keyboard Layout Language Spec}
 \author{HaaTa - Jacob Alexander}
 \email{haata@kiibohd.com}
-\docrev{0.3b}
+\docrev{0.3d}
 \urlname{kiibohd.com}
 
 %%% Titlepage %%%
@@ -34,6 +34,8 @@
 	\vhEntry{0.3}{2014-09-07}{HaaTa}{Initial KLL implementation}
 	\vhEntry{0.3a}{2014-11-21}{HaaTa}{Adding Defines}
     \vhEntry{0.3b}{2015-05-02}{HaaTa}{Adding Media Keys and Null Key}
+    \vhEntry{0.3c}{2015-09-29}{HaaTa}{Adding soft replacement}
+    \vhEntry{0.3d}{2015-10-17}{HaaTa}{Adding more consumer control codes}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -214,18 +216,21 @@ The following is the general syntax of the trigger:result pair.
 <trigger> : <result>;
 \end{lstlisting}
 
-There are three variants of the trigger:result pair.
+There are four variants of the trigger:result pair.
 Depending on which variant is used, assignment of the result changes.
 
 \begin{lstlisting}
 <trigger> :  <result>; # Replaces results on trigger
+<trigger> :: <result>; # Soft layer replacement
 <trigger> :+ <result>; # Adds results to trigger
 <trigger> :- <result>; # Removes result from trigger
 \end{lstlisting}
 
 In general, the normal trigger:result pair will be used to replace/change keymapping.
+The trigger::result pair is a soft layer replacement which is used to only do replacement if two conditions are met: not the default layer and the trigger being replaced is not the same as defined in the base map.
+This is useful for making broad replacement rules for all layers but only come into effect if actually being used.
 An adding trigger:+result pair is useful when adding an extra action to a key of macro of keys (e.g. solenoid press).
-An subtraction trigger:-result pair is useful when compiling in many layouts and there are certain additions that are undesirable.
+A subtraction trigger:-result pair is useful when compiling in many layouts and there are certain additions that are undesirable.
 
 
 %% Trigger
