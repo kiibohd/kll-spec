@@ -136,7 +136,7 @@
       {\z@} % No indent
 	{8ex plus 0.1ex minus -.2ex} %
       {20pt}% Two Lines
-      {\fontsize{14}{\f@baselineskip}\bf}%
+      {\fontsize{18}{\f@baselineskip}\bf}%
 }
 
 
@@ -148,7 +148,7 @@
 {\z@} % No indent
 {4ex plus 0.1ex minus -.2ex} %
 {1ex plus 0.1ex minus -.2ex}% Two Lines
-{\fontsize{11}{\f@baselineskip}\bf}%
+{\fontsize{14}{\f@baselineskip}\bf}%
 }%
 
 
@@ -160,7 +160,7 @@
       {\z@} % No indent
 {4ex plus 0.1ex minus -.2ex} %
 {1ex plus 0.1ex minus -.2ex}% Two Lines
-{\fontsize{11}{\f@baselineskip}\bf}%
+{\fontsize{12}{\f@baselineskip}\bf}%
 }
 
 
@@ -430,9 +430,9 @@
 % Title Section Setup
 \renewcommand{\maketitle}{%
 	\null\vspace{ 2.0cm}%
-  	\pagecolor{grey}\afterpage{\nopagecolor}
+	\pagecolor{grey}\afterpage{\nopagecolor}
 	\begin{center}%
-   		{\includegraphics[width=6.5in]{logo.pdf}}
+		{\includegraphics[width=6.5in]{logo.pdf}}
 	\end{center}\par
 	\null\vspace{-0.2cm}%
 	\begin{center}%
