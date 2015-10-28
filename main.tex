@@ -13,11 +13,11 @@
  %  - FIXME is another highlighting tag :D
 
 
-\title{KLL Spec v0.4}
+\title{KLL Spec v0.5}
 \titlename{Keyboard Layout Language Spec}
 \author{HaaTa - Jacob Alexander}
 \email{haata@kiibohd.com}
-\docrev{DRAFT - 0.4}
+\docrev{DRAFT - 0.5}
 \urlname{kiibohd.com}
 
 %%% Titlepage %%%
@@ -37,6 +37,7 @@
 	\vhEntry{0.3c}{2015-09-29}{HaaTa}{Adding soft replacement}
 	\vhEntry{0.3d}{2015-10-17}{HaaTa}{Adding more consumer control codes}
 	\vhEntry{0.4}{2015-05-19}{HaaTa}{Adding key state scheduling}
+	\vhEntry{0.5}{2015-05-26}{HaaTa}{Adding Pixel Output Control}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -1054,8 +1055,14 @@ Some uses for Partial Maps are to swap Caps Lock and Control, or define Colemak,
 Partial Maps can be used to generate a Combined Map or be compiled individually to be layered on the keyboard firmware dynamically for FN layers.
 
 
-%%% LED Control %%%
-%\chapter{LED Control}
+%%% Pixel Output Control %%%
+\chapter{Pixel Output Control}
+
+Some keyboards have large arrays of pixel devices such as RGB backlighting or LCD displays.
+Pixel output control defines ways to specify animations and events directly using KLL without having to program custom capabilities.
+
+Instead of triggering individual pixels, events are characterized as animation groups.
+These animation groups can both a trigger and a result in order to link together animation groups with complex input sequences.
 
    % TODO %
 % - Default parameters?
@@ -1277,3 +1284,4 @@ If the feature is in this list, there is no guarantee that it will be in the spe
 
 
 \end{document}
+
