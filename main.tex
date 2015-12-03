@@ -37,7 +37,7 @@
 	\vhEntry{0.3c}{2015-09-29}{HaaTa}{Adding soft replacement}
 	\vhEntry{0.3d}{2015-10-17}{HaaTa}{Adding more consumer control codes}
 	\vhEntry{0.4}{2015-05-19}{HaaTa}{Adding key state scheduling}
-	\vhEntry{0.5}{2015-05-26}{HaaTa}{Adding Pixel Output Control}
+	\vhEntry{0.5}{2015-12-02}{HaaTa}{Adding Pixel Output Control}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -334,6 +334,32 @@ S104(H) + S105(O) : <result>; # Incorrect
 S100 + S104(H)    : <result>; # Correct, holding a key
 S101 + S105(O)    : <result>; # Correct, key is not pressed
 \end{lstlisting}
+
+
+% Key Positioning
+\subsubsection{Key Positioning}
+\label{subsubsec:keypositioning}
+
+It is possible to give a physical location to a particular Scan Code.
+This allows for configuration utilities to automatically generate the layout as well as give hints to pixel positioning (i.e. backlight keys).
+Key positioning is generally completely optional and needs to be done once for every physical layout configuration of the device.
+
+Each key may be assigned the following options, by default they are set to 0.
+
+\begin{itemize}
+\item x, y, z positions (mm)
+\item rx, ry, rz rotations (deg)
+\end{itemize}
+
+The units are in mm and degrees respectively.
+
+\begin{lstlisting}
+# Set the x position 20 mm and x rotation 15 deg
+S120 <= x:20,rx:15;
+\end{lstlisting}
+
+Currently keycap shape is not supported.
+Though suggestions are welcome on how best to support them (especially the odd shaped ones).
 
 
 % USB Code
@@ -1026,11 +1052,11 @@ For example, a clicker speaker.
 
 \begin{lstlisting}
 # Clicker speaker with "sound select" and volume args
-myControlableClicker => clickerCFunction( sound:2, volume:1 );
+myControlableClicker => clickerCFunction(sound:2, volume:1);
 
 # Use the capability when Scan Code 0x2C is pressed
 # NULL specifies the default option of the capability
-S[0x2C] : myControlableClicker( NULL, 25 );
+S[0x2C] : myControlableClicker(NULL, 25);
 \end{lstlisting}
 
 When defining capabilities like solenoids and clickers, follow the naming convention and same number of arguments.
@@ -1064,25 +1090,202 @@ Pixel output control defines ways to specify animations and events directly usin
 Instead of triggering individual pixels, events are characterized as animation groups.
 These animation groups can both a trigger and a result in order to link together animation groups with complex input sequences.
 
-   % TODO %
-% - Default parameters?
-% - Parameters
-% - USB Code/Scan Code locations
-% - Indexed locations
-% - Non USB/Scan Code locations
-% - Overwriting previous settings
+As with Scan Codes/USB Codes individual pixels also need a common way to map actions to them.
+However, unlike Scan Codes, keyboards may have multiple disjunct sets of numbering schemes with different bit widths for controlling each pixel.
+To get around this a pixel mapping is required in order to teach the KLL compiler where the pixels are.
 
-% - Protocol
-% * n channels per led
-% * Only use supported channels (rest should be compiled out/ignored)
-% * Each animation has m frames
-% * Clock divider setting for each animation
-% * Animation types (Single, k loops, infinite loop)
-% * Brightness per led
-% * Overall brightness
-% * Animation end as trigger
-% * Animation control capabilities
-% * Complex display support (Font support)
+
+%% Pixel Mapping
+\section{Pixel Mapping}
+
+Individual pixels such as LEDs or LCD pixels are not defined uniformly in hardware, especially if multiple types of hardware drivers are used in a single input device.
+To get around this logical pixels are defined that may contain multiple lighting channels.
+For convenience, these pixels are also mapped to Scan Codes at the same time (if relevant).
+
+The initial channel number is hardware specific and doesn't have to be in order.
+While the pixel number is arbitrary and may be any number you like (stick with lower numbers for ideal packing).
+
+\begin{lstlisting}
+# Format
+P[<pixel>](<ch 1#>:<width>, ...) : <Scan Code>;
+
+# Pixel 5, Channel 30, Single channel
+# 8 bit width, Scan Code 0x13
+P[5](30:8) : 0x13;
+
+# Pixel 6, Channels 35-37, Triple channel
+# 2 bit width, Misc Pixel
+P[6](35:2, 36:2, 37:2) : None;
+\end{lstlisting}
+
+
+%% Animations
+\section{Animations}
+\label{sec:animations}
+
+Animations are sets of changes applied to one of more mapped pixels over a period of time.
+Values may be applied to single or sets of pixels by various means including setting, adding, subtracting, etc.
+For convenience pixels are automatically grouped into layers if Scan Codes were used during the pixel mapping.
+
+Each animation is given a label.
+A label is an arbitrary text label (KLL string rules apply) used by KLL to identify the animation set.
+
+\begin{lstlisting}
+A[<label>] <= <modifiers>;
+A[MyEyesAreBleeding] <= <modifiers>;
+\end{lstlisting}
+
+While defining the animation label, default animation modifiers can be applied.
+Modifiers can include options such as the number of loops to run the animation, clock divider for animation speed or special hardware features the pixels may have (e.g. hardware fade).
+
+The following modifiers are supported.
+
+\begin{lstlisting}
+loop:<num>   # Specific number of loops
+loop         # Loop infinitely
+div:<num>    # Animation frame divider
+start
+stop
+frame:<frame>
+<op>:<value> # Channel set
+             # Use mulitple times to set multiple channels
+\end{lstlisting}
+
+An example modifier setup for an animation.
+
+\begin{lstlisting}
+# At keyboard start, loop animation 3 times
+A[MyEyesAreBleeding] <= start, loop:3;
+\end{lstlisting}
+
+Using the defined logical pixels, each frame of the animation can be defined.
+It is also possible to use ranges and pre-defined layers as groups of pixels within an animation set as a single colour.
+When sets contain heterogenious sets of number of channels (e.g. RGB vs. monochrome) the first channel operations are used first and the extra are ignored for affected pixels.
+
+Pixel values are changed using operator:value pairs.
+The operator, if defined, indicates that the defined value modifies the current value rather than just overriding it.
+When evaluating the animation stack, the stack is parsed top to bottom until a set (no operator) value is found.
+This value is applied, then the above animations for that pixel are applied bottom to top.
+
+The following operators are supported.
+
+\begin{lstlisting}
+<no op> # Set
++       # Add
+-       # Subtract
++:      # Add no roll-over
+-:      # Add no roll-over
+<<      # Left shift
+>>      # Right shift
+\end{lstlisting}
+
+Each frame of the animation must be defined individually describing what changes each frame makes to which pixels.
+One or more pixels may be assigned to that animation frame.
+It's also possible to use pixel groupings and ranges of pixels.
+
+\begin{lstlisting}
+# Basic animation frame syntax
+A[<label>, <frame>] <= <pixels>;
+# Animation "Bleed", frame 2
+A[Bleeed, 2] <= <pixels>;
+
+# Single pixel syntax
+A[Bleeed, 2] <= P[<pixel>](<op><ch value>);
+# Add 52 to first two channels of pixel 12
+A[Bleeed, 3] <= P[12](+52, +52);
+
+# Set two pixels to 20
+A[Bleeed, 4] <= P[3](20), P[4](20);
+
+# Set function layer 2 pixels to white in 24-bit RGB
+A[Bleeed, 5] <= PL[2](255,255,255);
+
+# Function layer and pixel
+A[Bleeed, 6] <= PL[2](300,200,100), P[30](30);
+
+# Ranges and lists of pixels
+A[Bleeed, 7] <= P[1-20](40);
+A[Bleeed, 8] <= P[1,4,6,8,9](0x25);
+\end{lstlisting}
+
+
+%% Triggers
+\section{Triggers}
+
+Animations also generate a few different kinds of triggers.
+These triggers can be used for anything from starting another animation (i.e. linked animations), custom capabilties, or even USB keyboard output.
+The result syntax is identical to all other KLL triggers.
+
+There are two types of triggers available: end and frame triggers.
+The end trigger, triggers when the animation finishes all scheduled loops.
+This means that an infinitely running animation will never have an end trigger.
+Triggers do not go off if the animiation is forceably ended by means of an alternate trigger, but if another trigger sets an infinitely running animation to a finite number of loops, then it may trigger an end trigger.
+A frame trigger triggers whenever a certain frame is reached within an animation, regardless of how many loops the animation may be running for.
+
+\begin{lstlisting}
+# End trigger
+A[LongAnim] : <result>;
+
+# Frame triggers
+A[LongAnim, 3]   : <result>;
+A[ShortLED, 200] : <result>;
+\end{lstlisting}
+
+Per pixel triggers are not supported.
+However it is possible to extend the spec to support this if there are enough requests.
+
+
+%% Results
+\section{Results}
+
+Animations can also be dynamically controlled using a triggers.
+The standard results mechanism is used to interact with the animations.
+
+All animation modifiers may be used to control the animation.
+See Section \ref{sec:animations} for more details on each of the modifiers.
+
+To be clear, it is completely valid to use an animation trigger to modify itself.
+
+\begin{lstlisting}
+<trigger> : A[Dynamo]
+\end{lstlisting}
+
+Pixels and pixel groups are limited to channel setting modifiers and perhaps any additional hardware modifiers that may be available.
+
+\begin{lstlisting}
+# Operator on values to an 8-bit RGB pixel
+<trigger> : P[23](+43,+21,-40);
+
+# Set a pixel grouping layer 3 to 54
+<trigger> : PL[3](54);
+\end{lstlisting}
+
+
+%% Pixel Positioning
+\section{Pixel Positioning}
+
+In order to support complex animation support, each pixel can be assigned a physical position.
+This allows for turning sets of pixels into a display which can render basic fonts and images.
+
+If the pixel was assigned to a Scan Code, then the pixel will inherit the positioning of the Scan Code key.
+However, you can still override the pixel position (will not affect the Scan Code position).
+
+Each key may be assigned the following options, by default they are set to 0.
+
+\begin{itemize}
+\item x, y, z positions (mm)
+\item rx, ry, rz rotations (deg)
+\end{itemize}
+
+The units are in mm and degrees respectively.
+
+\begin{lstlisting}
+# Set the x position 20 mm and x rotation 15 deg
+P[30] <= x:20,rx:15;
+\end{lstlisting}
+
+Currently the size of the pixel is not taken into account.
+In general this should not matter for most purposes but it is possible to extend the spec to help deal with pixel shapes.
 
 
 %%% Compilation %%%
