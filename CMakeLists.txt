@@ -4,7 +4,7 @@
 cmake_minimum_required ( VERSION 2.8.4 )
 
 project ( KLL_Spec NONE )
-include ( UseLATEX.cmake )
+include ( UseLATEX.txt )
 
 add_latex_document ( main.tex
 	INPUTS
