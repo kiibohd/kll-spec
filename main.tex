@@ -38,6 +38,7 @@
 	\vhEntry{0.3d}{2015-10-17}{HaaTa}{Adding more consumer control codes}
 	\vhEntry{0.4}{2015-05-19}{HaaTa}{Adding key state scheduling}
 	\vhEntry{0.5}{2015-12-02}{HaaTa}{Adding Pixel Output Control}
+	\vhEntry{0.5a}{2015-12-10}{HaaTa}{Adding array variables}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -103,6 +104,17 @@ Variable names can only use A-Z, a-z, 0-9 and underscores and must not start wit
 \begin{lstlisting}
 "space containing variable" = "space-ful variable";
 mix = "And Match";
+\end{lstlisting}
+
+In some cases it's necessary to define an array variable to give the compiler better context of the variables.
+Particularily when defining separate buffer locations that need to be combined into a single index range (e.g. Pixel Control).
+Arrays can be defined by index or space separated list.
+If the compiler is unsure about how to use the array it will default to a space separated list as the output (e.g. Defines).
+
+\begin{lstlisting}
+variable[0] = "index 1 info";
+variable[1] = 56;
+var2[] = item1 item2 "item 3";
 \end{lstlisting}
 
 
@@ -1107,11 +1119,11 @@ While the pixel number is arbitrary and may be any number you like (stick with l
 
 \begin{lstlisting}
 # Format
-P[<pixel>](<ch 1#>:<width>, ...) : <Scan Code>;
+P[<pixel>](<ch 1>:<width>, ...) : <Scan Code>;
 
 # Pixel 5, Channel 30, Single channel
 # 8 bit width, Scan Code 0x13
-P[5](30:8) : 0x13;
+P[5](30:8) : S0x13;
 
 # Pixel 6, Channels 35-37, Triple channel
 # 2 bit width, Misc Pixel
