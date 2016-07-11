@@ -692,11 +692,17 @@ The format is as follows.
 <identifier>([<state scheduler>][:<time>]) : <result>;
 \end{lstlisting}
 
-To press A then release after 300~ms.
+Hold A for at least 300~ms.
 
 \begin{lstlisting}
 U"a"(300ms)   : <result>;
-U"a"(P:300ms) : <result>; # Same
+U"a"(H:300ms) : <result>; # Same
+\end{lstlisting}
+
+Hold A for at most 300~ms.
+
+\begin{lstlisting}
+U"a"(R:300ms) : <result>;
 \end{lstlisting}
 
 More complicated state scheduling is also possible.
@@ -704,7 +710,8 @@ Press timers may be used to have combos that require a key pressed first then af
 
 \begin{lstlisting}
 U"a" + U"b"(P:1s) : <result>; # Press B after 1s
-U"a" + U"b"(H:1s) : <result>; # Invalid, cannot track B time
+U"a" + U"b"(H:1s) : <result>; # B must be held for at least 1s
+U"a" + U"b"(R:1s) : <result>; # B cannot be held for more than 1s
 \end{lstlisting}
 
 Non-trigger events cannot be used with a time specifier.
