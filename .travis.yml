@@ -1,0 +1,43 @@
+# travis-ci - KLL Spec Travis Integration
+
+sudo: required
+dist: trusty
+
+# Install packages
+before_install:
+- sudo apt-get -qq update && sudo apt-get install -y --no-install-recommends texlive-fonts-recommended
+  texlive-latex-extra texlive-fonts-extra dvipng texlive-latex-recommended tree texlive-pictures pgf
+  poppler-utils latex2html
+- tree
+
+# Make sure system has correct versions
+install:
+- uname -a
+- tree
+- pdflatex --version
+- cmake --version
+
+# Build pdf
+script:
+- mkdir build
+- cd build
+- cmake ..
+- make
+- cp -f main.pdf kll-spec-${TRAVIS_BRANCH}.pdf
+- tree
+
+# Deploy pdf
+deploy:
+  provider: releases
+  api_key:
+    secure: HYOC4DH7o5Oc3pMUOzHw5g8/sGZNmmbLpDoxxE+e9qlb2MIJjrBaud8T1KWNknvG2y4lcJGpE48UXYvCgtJbd6Jlk3USFntfBoHgl8iTmt7mFTfgZLvmArPYwwnFolGMHpKoegsetpzSxAKQZFpofxiXVbi9hklQMFlIzTaA2aVuVKZfU/wChQI4K4uxKgAmG/Dyr1sCy0pEp2MIV6sRt3ESK1GO6o5+4bLksoAHu6NuJQbNrueN2wWsyYKFF0FwwOk85SUOpI+bFH7yzxkE7fPDOvnrnvT/9j/sHOxXivOOLaZCIc4FcKt7S2dUK3dCLZT7+jVXX5QcWIjnbT1vlJJu5FBgwunBo2Mh3FX+s0uQ24jMQV9/11YbClqKTyiqWBZ0qLwirdxf25ACS2tHQdRnmFeu8JGRrTNiMFATROc3M62FX5qvUJe1d7lGY2tWNsmTfSQRjXI6Wn6S0sthJxmY5Uhli9GMCVwzw8ChA5qwMHZl0btqVnmOJd2HAjFTz30ZixUQzyhIgPEh6iJcKxLsHPGoXXXWFthBVh5zgzYaNOSTbQu59pMZd0rvdoBhUjqnlpVJNueVrCFiCFKVWTwsSooEn+f1Laq3RDeMjhWYdXwbHoTILoP8+KZN1L+C7l3JMz8i5I7/nIi/SrYnZjp5a63hEVNTlhZ1Nxk7xY8=
+  file: kll-spec-${TRAVIS_BRANCH}.pdf
+  skip_cleanup: true
+  on:
+    repo: kiibohd/kll-spec
+    tags: true
+    branch:
+      - test
+      - master
+      - 0.5
+
