@@ -13,11 +13,11 @@
  %  - FIXME is another highlighting tag :D
 
 
-\title{KLL Spec v0.5b}
+\title{KLL Spec v0.5c}
 \titlename{Keyboard Layout Language Spec}
 \author{HaaTa - Jacob Alexander}
 \email{haata@kiibohd.com}
-\docrev{DRAFT - 0.5b}
+\docrev{DRAFT - 0.5c}
 \urlname{kiibohd.com}
 
 %%% Titlepage %%%
@@ -40,6 +40,7 @@
 	\vhEntry{0.5}{2015-12-02}{HaaTa}{Adding Pixel Output Control}
 	\vhEntry{0.5a}{2015-12-10}{HaaTa}{Adding array variables}
 	\vhEntry{0.5b}{2016-04-20}{HaaTa}{Adding trigger macro isolation}
+	\vhEntry{0.5c}{2016-10-09}{HaaTa}{Adding pixel addressing types}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -1184,14 +1185,19 @@ Modifiers can include options such as the number of loops to run the animation, 
 The following modifiers are supported.
 
 \begin{lstlisting}
-loop:<num>   # Specific number of loops
-loop         # Loop infinitely
-div:<num>    # Animation frame divider
-start
+loop:<num> # Specific number of loops
+loop       # Loop infinitely
+div:<num>  # Animation frame divider
+start      # Stop animation(s)
 stop
+interp:<type>
+           # Interpolate between channels
+           # on
+           # off (default)
+           # kll (pre-compute interpolation,
+           #      fastest
+           #      cannot be set dynamically)
 frame:<frame>
-<op>:<value> # Channel set
-             # Use mulitple times to set multiple channels
 \end{lstlisting}
 
 An example modifier setup for an animation.
@@ -1252,6 +1258,30 @@ A[Bleeed, 8] <= P[1,4,6,8,9](0x25);
 \end{lstlisting}
 
 
+% Pixel Addressing
+\subsection{Pixel Addressing}
+
+Pixels, as part of an animation, have a few different types of addressing.
+These make it easier to build animations more concisely and support a wide variety of keyboards with minimal/no modifications to the animation.
+
+\begin{lstlisting}
+P[2]          # Pixel index
+P[r:3]        # Fill row
+P[c:10]       # Fill column
+P[r:3,c:10]   # Rectangle index
+P[r:5%,c:10%]
+              # Rectangle % index
+P[i+2]        # Relative pixel index
+P[r:i+3]      # Relative row fill
+P[c:i-10]     # Relative column row fill
+P[r:i-3,c:10] # Relative rectangle index
+P[r:i+5%,c:i-3%]
+              # Relative rectangle % index
+U"A"          # USB Code index  (current layer)
+S0x10         # Scan Code index (current layer)
+\end{lstlisting}
+
+
 %% Triggers
 \section{Triggers}
 
@@ -1290,7 +1320,9 @@ See Section~\ref{sec:animations} for more details on each of the modifiers.
 To be clear, it is completely valid to use an animation trigger to modify itself.
 
 \begin{lstlisting}
-<trigger> : A[Dynamo]
+<trigger> : A[Dynamo];
+<trigger> : A[Dynamo](frame:3, interp:on);
+<trigger> : A[Dynamo](stop);
 \end{lstlisting}
 
 Pixels and pixel groups are limited to channel setting modifiers and perhaps any additional hardware modifiers that may be available.
@@ -1500,26 +1532,12 @@ The number beside each of the arguments specifies the size of the argument in by
 Possible features for future revisions of the KLL spec.
 If the feature is in this list, there is no guarantee that it will be in the specified version series.
 
-\section{Possible 0.4+}
-
-\begin{itemize}
-\item Layer number symbolic naming
-\item Internal lock/state variables (Virtual States)
-\item Key ignore specifier during macro
-\item Result/Key ``locking'' (just like holding down a key until pressed again)
-\end{itemize}
-
-\section{Possible 0.5+}
-
-\begin{itemize}
-\item Mouse control
-\item Add capabilities descriptions
-\item LED/Pixel control with animation support
-\end{itemize}
-
 \section{Possible 0.6+}
 
 \begin{itemize}
+\item Internal lock/state variables (Virtual States)
+\item Add capabilities descriptions
+\item Mouse control
 \item Joystick control
 \item Unicode output
 \item More concise way to indicate capability defaults
