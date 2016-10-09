@@ -15,6 +15,8 @@ For convenience there are up-to-date copies are available.
 * [![Build Status](https://travis-ci.org/kiibohd/kll-spec.svg?branch=0.5)](https://travis-ci.org/kiibohd/kll-spec) [0.5 - *Next Release*](https://www.overleaf.com/read/cfqydmrpfdrs)
 * [![Build Status](https://travis-ci.org/kiibohd/kll-spec.svg?branch=master)](https://travis-ci.org/kiibohd/kll-spec) [master - Future](https://www.overleaf.com/read/cfqydmrpfdrs)
 
+Recent pdfs are also available through [GitHub Releases](https://github.com/kiibohd/kll-spec/releases) - [Latest](https://github.com/kiibohd/kll-spec/releases/latest)
+
 
 Generating
 ----------
