@@ -1185,19 +1185,51 @@ Modifiers can include options such as the number of loops to run the animation, 
 The following modifiers are supported.
 
 \begin{lstlisting}
-loop:<num> # Specific number of loops
-loop       # Loop infinitely
-div:<num>  # Animation frame divider
-start      # Stop animation(s)
-stop
-interp:<type>
-           # Interpolate between channels
-           # on
-           # off (default)
-           # kll (pre-compute interpolation,
-           #      fastest
-           #      cannot be set dynamically)
-frame:<frame>
+loops:<num> # Specific number of loops
+loop        # Loop infinitely
+divshift:<num>
+            # Animation frame divider shift
+	    # Needs to match divmask
+	    # e.g. 0x03 => 2
+	    #      0x0F => 4
+divmask:<num>
+            # Animation frame divider mask
+	    # # of loops for frame transition
+	    # Must be contiguous
+	    # e.g.  0x00, 0x01, 0x03, 0x0F
+	    # *NOT* 0x02, 0x08, 0x24
+start       # Start animation
+pause       # Pause animation
+stop        # Stop animation
+pos:<frame> # Set animation frame number
+pfunc:<name>(<args>)
+            # Frame pixel fill function
+	    # off
+	    # interp
+	    #  Interpolate between pixels
+	    #  Slow, uses more CPU
+	    # kllinterp
+	    #  Pre-computed interpolation
+	    #  Fast, uses more memory
+ffunc:<name>(<args>)
+            # Frame extension fill function
+	    # off
+	    # interp
+	    #  Add frames dynamically
+	    #  using interpolation
+	    #  i\.e\. use defined as key-frames
+	    #  Slow, uses more CPU
+	    # kllinterp
+	    #  Pre-computed interpolation
+	    #  Fast, uses more CPU
+replace:<type>
+            # By default do not replace, just stack
+	    # stack
+	    #  Stack animation, do not replace
+	    # basic
+	    #  Replace if same index and trigger
+	    # all
+	    #  Replace if same index
 \end{lstlisting}
 
 An example modifier setup for an animation.
