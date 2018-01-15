@@ -3,6 +3,8 @@ KLL Spec - Keyboard Layout Language
 
 [![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/input.club.png)](https://kiwiirc.com/client/irc.freenode.net/#input.club)
 
+[Visit our Discord Channel](https://discord.gg/GACJa4f)
+
 
 KLL Spec
 --------
@@ -10,12 +12,11 @@ KLL Spec
 [github](https://github.com/kiibohd/kll-spec) has the master copy of the [KLL Spec](https://input.club/kll/).
 
 For convenience there are up-to-date copies are available.
-* [0.3d - **Stable**](https://www.overleaf.com/read/zzqbdwqjfwwf)
-* [0.4](https://www.overleaf.com/read/mnnqqpnxhhyr)
-* [![Build Status](https://travis-ci.org/kiibohd/kll-spec.svg?branch=0.5)](https://travis-ci.org/kiibohd/kll-spec) [0.5 - *Next Release*](https://www.overleaf.com/read/cfqydmrpfdrs)
-* [![Build Status](https://travis-ci.org/kiibohd/kll-spec.svg?branch=master)](https://travis-ci.org/kiibohd/kll-spec) [master - Future](https://www.overleaf.com/read/cfqydmrpfdrs)
+* [![Build Status](https://travis-ci.org/kiibohd/kll-spec.svg?branch=0.3d)](https://travis-ci.org/kiibohd/kll-spec)[0.3d - **Stable**](https://github.com/kiibohd/kll-spec/releases/download/v0.3d/kll-spec-v0.3d.pdf)
+* [![Build Status](https://travis-ci.org/kiibohd/kll-spec.svg?branch=0.4)](https://travis-ci.org/kiibohd/kll-spec)[0.4](https://github.com/kiibohd/kll-spec/releases/download/v0.4/kll-spec-v0.4.pdf)
+* [![Build Status](https://travis-ci.org/kiibohd/kll-spec.svg?branch=0.5)](https://travis-ci.org/kiibohd/kll-spec) [0.5 - *Next Release*](https://github.com/kiibohd/kll-spec/releases/download/v0.5c/kll-spec-v0.5c.pdf)
 
-Recent pdfs are also available through [GitHub Releases](https://github.com/kiibohd/kll-spec/releases) - [Latest](https://github.com/kiibohd/kll-spec/releases/latest)
+PDFs are available through [GitHub Releases](https://github.com/kiibohd/kll-spec/releases) - [Latest](https://github.com/kiibohd/kll-spec/releases/latest)
 
 
 Generating
