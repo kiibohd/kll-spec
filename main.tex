@@ -13,11 +13,11 @@
  %  - FIXME is another highlighting tag :D
 
 
-\title{KLL Spec v0.5c}
+\title{KLL Spec v0.5.5}
 \titlename{Keyboard Layout Language Spec}
 \author{HaaTa - Jacob Alexander}
 \email{haata@kiibohd.com}
-\docrev{DRAFT - 0.5c}
+\docrev{DRAFT - 0.5.5}
 \urlname{kiibohd.com}
 
 %%% Titlepage %%%
@@ -41,6 +41,8 @@
 	\vhEntry{0.5a}{2015-12-10}{HaaTa}{Adding array variables}
 	\vhEntry{0.5b}{2016-04-20}{HaaTa}{Adding trigger macro isolation}
 	\vhEntry{0.5c}{2016-10-09}{HaaTa}{Adding pixel addressing types}
+	\vhEntry{0.5.4}{2018-03-24}{HaaTa}{Adding new trigger options}
+	\vhEntry{0.5.5}{2018-05-03}{HaaTa}{Adding Locale support}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -426,7 +428,8 @@ U"A"  : <result>;
 U"a"  : <result>; # Same as previous
 \end{lstlisting}
 
-Refer to Section~\ref{chpt:USBCodeTable} for the complete list of USB Codes.
+Refer to Section~\ref{chpt:USBCodeTable} for the complete list of standard (US ANSI) USB Codes.
+For dealing with non-ANSI keyboard locales and layouts please refer to Section~\ref{sec:locales}.
 
 There is an important difference when using a USB Code as the the Trigger as compared to a Scan Code.
 When an assignment is done using a USB Code, a lookup must occur to find the original Scan Code that the USB Code was assigned to.
@@ -563,8 +566,113 @@ There is always the chance that the OS tries to do something strange with the LE
 In this case there is really nothing the keyboard can do to right itself.
 
 
+% Layer State
+\subsection{Layer State}
+\label{subsec:Layer_State}
+
+Layer state may be used as a trigger to a macro.
+In most cases using \textbf{Layer} is preferrable as it will trigger using any of: Shift, Latch and Lock.
+While using the specific triggers is more restrictive.
+
+\begin{lstlisting}
+Layer[1]      : <result>; # Layer 1
+LayerShift[2] : <result>; # Layer 2 shift
+LayerLatch[2] : <result>; # Layer 2 latch
+LayerLock[2]  : <result>; # Layer 2 lock
+\end{lstlisting}
+
+
+% State Scheduling
+\subsubsection{State Scheduling}
+
+Similar to keypresses, layers have four states: activate (\textbf{A}), on (\textbf{On}), deactivate (\textbf{D}) and off (\textbf{Off}).
+Also similar to keypresses, on and off cannot be used to trigger a macro.
+While activate and deactivate can be used as a trigger to a macro.
+The default state for a layer is activate.
+
+\begin{lstlisting}
+Layer[1]    : <result>;
+Layer[1](A) : <result>; # Same as above
+Layer[1](D) : <result>; # Layer 1 disable
+\end{lstlisting}
+
+As with indicators (Section~\ref{subsec:LED_Indicator_Code}, the on and off states must be specified with another trigger as they are non-trigger conditions.
+
+\begin{lstlisting}
+Layer[1](On) + U"c"  : <result>; # Correct
+U"a" + Layer[1](Off) : <result>; # Correct
+Layer[1](Off)        : <result>; # Incorrect
+Layer[1](On), U"d"   : <result>; # Incorrect
+\end{lstlisting}
+
+
+% Animation
+\subsection{Animation}
+
+Refer to Section~\ref{sec:Animation_Triggers} on Animation Trigger usage.
+
+
+% Generic Triggers
+\subsection{Generic Triggers}
+
+For custom defined triggers there may not exist KLL syntax yet.
+In this case, generic triggers can be used to define the trigger identifier and code directly.
+Generally these trigger identifiers shouldn't change; however, don't consider them portable between major firmware versions.
+But an effort is made not to change the identifier numbering.
+
+The code is always specified as an 8 bit number.
+For codes higher than 255 you'll need to determine the identifier associated with that code.
+For example, \textbf{0} is Switch Bank 1 corresponding from 0 to 255 and \textbf{2} is Switch Bank 3 corresponding from 512 to 767.
+
+While it is possible to trigger on the Animation Bank (See Section~\ref{subsubsec:Trigger_Identifiers}) these may be dynamically indexed based on which animations are defined.
+So you will almost certainly run into issues using a Generic Trigger.
+
+Generic triggers do not support ranges as seen in Section~\ref{subsection:Range}.
+
+\begin{lstlisting}
+S2     : <result>;
+T[0,2] : <result>; # Same as S2
+S257   : <result>;
+T[1,1] : <result>; # Same as S257
+
+I"NumLock" : <result>;
+T[4,0]     : <result>; # I"NumLock"
+
+Layer[1] : <result>;
+T[9,1]   : <result>; # Layer[1]
+
+# On host sleep trigger
+T[17,0] : <result>;
+# 1 minute after host sleep trigger
+T[17,1] : <result>;
+
+# After device inactivity
+T[19,0] : <result>;
+# 2 minutes after device usages stops
+T[19,2] : <result>;
+\end{lstlisting}
+
+
+% List of Trigger Identifiers
+\subsubsection{Trigger Identifiers}
+\label{subsubsec:Trigger_Identifiers}
+
+The current list of trigger identifiers and their code ranges.
+
+\begin{ltable}{triggeridentifiers}{ l | r | l }{Table of Trigger Identifiers and Code Ranges}
+
+\textbf{Identifier Value} & \textbf{Name} & \textbf{Code Offset} \\
+\hline
+\hline
+
+\input{TriggerCodeTable} % See .tex file for data
+
+\end{ltable}
+
+
 % Range
 \subsection{Range}
+\label{subsection:Range}
 
 For convenience, it is also possible to define a range of triggers rather than explicitly defining each of the trigger:result pairs.
 This is useful for defining things such as using the clicker speaker for every single key or just the letter keys.
@@ -757,7 +865,8 @@ Result USB Codes are defined the same way as trigger USB Codes (Section~\ref{sub
 <trigger> : U"a"; # Same as previous
 \end{lstlisting}
 
-Refer to Section~\ref{chpt:USBCodeTable} for the complete list of USB Codes.
+Refer to Section~\ref{chpt:USBCodeTable} for the complete list of standard (US ANSI) USB Codes.
+For dealing with non-ANSI keyboard locales and layouts please refer to Section~\ref{sec:locales}.
 
 
 % State Scheduling
@@ -945,6 +1054,100 @@ myCapability => myCFunction( arg1:1, arg2:1 );
 \end{lstlisting}
 
 
+%% Locales %%
+\section{Locales}
+\label{sec:locales}
+
+When the USB HID Spec was designed, the main assumption was that all the naming was to be done for US (ANSI) keyboards first.
+Then, let the OS decide whether or not to convert each keypress to a different locale, such as French AZERTY.
+For KLL, this poses two challenges.
+
+The first challenge is that the OS must be configured to use a particular layout, something which only the user can truly determine.
+Additional software can help to deduce what the OS configured layout is, but it requires OS specific code to query this information.
+And, to make matters worse, it's possible for users to define custom layouts that the user created.
+
+The second challenge is that when defining layouts in KLL it's not sufficient to just use the default ANSI labels when the user is more familiar with another locale (DE QWERTZ for example).
+Since the user doesn't know the ANSI positions, a great deal of mental acrobatics (or lookup tables) are necessary to determine which codes to actually use.
+This means the resulting KLL files look incorrect (and are incorrect, if the user sets the host layout to ANSI), but are correct when using the host layout they were meant for.
+
+USB HID has only one field to help the OS to determine (and the OS is not required to use it) which host layout to use, \textbf{bCountryCode}.
+Unfortunately, there are only 34 locales (35 including Undefined/Not Supported) by the USB HID Spec.
+For convenience, refer to Section~\ref{chpt:LocaleTable} for a list of all the numerical USB HID layout codes.
+
+To get around these issues, KLL uses the \href{https://github.com/hid-io/layouts}{HID-IO layouts repository}(https://github.com/hid-io/layouts) to handle all standard and non-standard USB HID layout codes.
+When defining your layout, each file may set the \textbf{HIDMapping} variable which will telll the KLL compiler how to interpret the USB names, and lookup according to that locale.
+If you specify multiple files, each with a different locale, each will be processed in their own locale.
+However, the final locale corresponds to the last file per layer.
+The final locale is only used for determining the USB HID \textbf{bCountryCode}, nothing more.
+If \textbf{HIDMapping} is not set, it inherits the previous files locale.
+
+\textbf{Please note}: It's still possible to define your locale's layout in hardware; however, many symbols are not possible using a US ANSI layout.
+This also applies to things such as Programmer's Dvorak, which uses shifted characters differently than Dvorak (and US ANSI).
+You are nearly always better off setting the keyboard to use a locale instead of a hardware layout, even if a hardware layout does seem more convenient.
+
+\begin{lstlisting}
+# Base KLL file used in locale tests
+Name = base.locale-test;
+Version = 0.1;
+Author = "HaaTa (Jacob Alexander) 2018";
+KLL = 0.5;
+HIDMapping = default;
+
+# Modified Date`
+Date = 2018-06-04;
+
+# Adapted from an early Kira mapping
+S39 : U"Q";
+S40 : U"W";
+S41 : U"E";
+S42 : U"R";
+S43 : U"T";
+S44 : U"Y";
+S45 : U"U";
+S46 : U"I";
+S47 : U"O";
+S48 : U"P";
+S57 : U"A";
+S58 : U"S";
+S59 : U"D";
+S60 : U"F";
+S61 : U"G";
+S62 : U"H";
+S63 : U"J";
+S64 : U"K";
+S65 : U"L";
+S73 : U"Z";
+S74 : U"X";
+S75 : U"C";
+S76 : U"V";
+S77 : U"B";
+S78 : U"N";
+S79 : U"M";
+\end{lstlisting}
+
+\begin{lstlisting}
+# Test Layout Using a de_DE locale, above layout as base
+Name = de_DE-Test;
+Version = 0.1;
+Author = "HaaTa (Jacob Alexander) 2018";
+KLL = 0.5;
+HIDMapping = de_DE;
+
+# Modified Date
+Date = 2018-06-04;
+
+# Remap Y to Z and Z to Y
+# Then check that:
+# S44 -> 0x1D (US Z, DE Y)
+# S73 -> 0x1C (US Y, DE Z)
+# Is valid
+U"Y" : U"Z";
+U"Z" : U"Y";
+\end{lstlisting}
+
+
+
+
 %%% File Format %%%
 \chapter{File Format}
 
@@ -1015,6 +1218,17 @@ Each layer must support three different activation types.
 	\item Latch - Enables keymap until the next key is pressed
 	\item Lock - Enables keymap until Lock is pressed again
 \end{itemize}
+
+The recommended syntax for activating layers.
+In earlier versions of KLL, capabilities were used to directly manipulate layers.
+While this still works, capability syntax is a bit limiting as it does not work for corresponding Triggers.
+
+\begin{lstlisting}
+<trigger> : Layer[1];      # Shift Layer 1
+<trigger> : LayerShift[2]; # Shift Layer 2
+<trigger> : LayerLock[3];  # Lock Layer 3
+<trigger> : LayerLatch[4]; # Latch Layer 4
+\end{lstlisting}
 
 
 %% Example Keymap
@@ -1217,7 +1431,7 @@ ffunc:<name>(<args>)
 	    # interp
 	    #  Add frames dynamically
 	    #  using interpolation
-	    #  i\.e\. use defined as key-frames
+	    #  i.e. use defined as key-frames
 	    #  Slow, uses more CPU
 	    # kllinterp
 	    #  Pre-computed interpolation
@@ -1230,6 +1444,10 @@ replace:<type>
 	    #  Replace if same index and trigger
 	    # all
 	    #  Replace if same index
+	    # state
+	    #  Replace if same index, trigger and
+	    #  incoming state is press.
+	    #  If state is release, stop.
 \end{lstlisting}
 
 An example modifier setup for an animation.
@@ -1316,27 +1534,30 @@ S0x10         # Scan Code index (current layer)
 
 %% Triggers
 \section{Triggers}
+\label{sec:Animation_Triggers}
 
 Animations also generate a few different kinds of triggers.
 These triggers can be used for anything from starting another animation (i.e.\ linked animations), custom capabilties, or even USB keyboard output.
 The result syntax is identical to all other KLL triggers.
 
-There are two types of triggers available: end and frame triggers.
+There are two types of triggers available: done \textbf{D} and repeat \textbf{R} triggers.
 The end trigger, triggers when the animation finishes all scheduled loops.
-This means that an infinitely running animation will never have an end trigger.
-Triggers do not go off if the animiation is forceably ended by means of an alternate trigger, but if another trigger sets an infinitely running animation to a finite number of loops, then it may trigger an end trigger.
-A frame trigger triggers whenever a certain frame is reached within an animation, regardless of how many loops the animation may be running for.
+This means that an infinitely running animation will never have a done trigger.
+The repeat trigger is activated after each loop of an animation is finished.
+Triggers do not go off if the animation is forceably ended by means of an alternate trigger, but if another trigger sets an infinitely running animation to a finite number of loops, then it may trigger an end trigger.
 
 \begin{lstlisting}
-# End trigger
-A[LongAnim] : <result>;
+# Done/Repeat trigger
+A[LongAnim]    : <result>;
 
-# Frame triggers
-A[LongAnim, 3]   : <result>;
-A[ShortLED, 200] : <result>;
+# Done trigger
+A[LongAnim](D) : <result>;
+
+# Repeat trigger
+A[YourAnim](R) : <result>;
 \end{lstlisting}
 
-Per pixel triggers are not supported.
+Per pixel triggers and animation frame triggers are not supported.
 However it is possible to extend the spec to support this if there are enough requests.
 
 
@@ -1452,6 +1673,10 @@ USB Codes 0xF0 to 0xFF are never sent via USB and are for internal processing on
 It is possible to use any arbitrary USB Code as a function key.
 However, using something like a SysReq as your function key (in the default map) makes it unclear to other readers unless you explicitly comment this case in the .kll file.
 
+\href{http://www.usb.org/developers/hidpage/Hut1_12v2.pdf}{USB Keyboard/Keypad HID Table} (Section 10, pg. 53).
+
+\href{http://www.usb.org/developers/hidpage/Hut1_12v2.pdf}{http://www.usb.org/developers/hidpage/Hut1\_12v2.pdf}
+
 
 % System Control Code Table
 \newpage
@@ -1474,6 +1699,10 @@ Many of them are system specific.
 \input{SystemCodeTable} % See .tex file for data
 
 \end{ltable}
+
+\href{http://www.usb.org/developers/hidpage/Hut1_12v2.pdf}{System Control Table - Generic} (Section 4, pg. 26).
+
+\href{http://www.usb.org/developers/hidpage/Hut1_12v2.pdf}{http://www.usb.org/developers/hidpage/Hut1\_12v2.pdf}
 
 
 % Consumer Control Code Table
@@ -1498,6 +1727,10 @@ Many of them are system specific.
 
 \end{ltable}
 
+\href{http://www.usb.org/developers/hidpage/Hut1_12v2.pdf}{Consumer Control Table} (Section 15, pg. 75).
+
+\href{http://www.usb.org/developers/hidpage/Hut1_12v2.pdf}{http://www.usb.org/developers/hidpage/Hut1\_12v2.pdf}
+
 
 % LED Indicator Code Table
 \newpage
@@ -1519,6 +1752,10 @@ For completeness, the entire table is listed here.
 
 \end{ltable}
 
+\href{http://www.usb.org/developers/hidpage/Hut1_12v2.pdf}{LED Table} (Section 11, pg. 61).
+
+\href{http://www.usb.org/developers/hidpage/Hut1_12v2.pdf}{http://www.usb.org/developers/hidpage/Hut1\_12v2.pdf}
+
 
 % Capabilities Table
 \newpage
@@ -1538,6 +1775,28 @@ The number beside each of the arguments specifies the size of the argument in by
 \input{CapabilityTable} % See .tex file for data
 
 \end{ltable}
+
+
+% Locale Table
+\newpage
+\chapter{Locale Table}
+\label{chpt:LocaleTable}
+
+Following is a table of USB HID locale codes (i.e. \textbf{bCountryCode}'s).
+Codes go from 0 to 255, most codes are reserved and unused.
+
+\begin{ltable}{localeTable}{ l | l | l }{Table of USB HID Locales}
+
+\textbf{Code} & \textbf{Name} & \textbf{Alternate Name(s)} \\
+\hline
+\hline
+
+\input{LocaleTable} % See .tex file for data
+
+\end{ltable}
+\href{http://www.usb.org/developers/hidpage/HID1_11.pdf}{HID Descriptor} (Section 6.2.1, pg. 23).
+
+\href{http://www.usb.org/developers/hidpage/HID1_11.pdf}{http://www.usb.org/developers/hidpage/HID1\_11.pdf}
 
 
 %%% Glossary %%%
@@ -1567,15 +1826,12 @@ If the feature is in this list, there is no guarantee that it will be in the spe
 \section{Possible 0.6+}
 
 \begin{itemize}
-\item Internal lock/state variables (Virtual States)
 \item Add capabilities descriptions
 \item Mouse control
 \item Joystick control
 \item Unicode output
 \item More concise way to indicate capability defaults
-\item Add field to change USB country code
 \item Analog velocity and acceleration detection (optional, depends on hardware)
-\item Add debounce time control
 \end{itemize}
 
 

@@ -1,4 +1,4 @@
-%% Copyright (C) 2013-2014 Jacob Alexander
+%% Copyright (C) 2013-2018 Jacob Alexander
 %%
 %% kiibohd-template is free software; you can redistribute it and/or modify
 %% it under the terms of the GNU General Public License as published by
@@ -49,6 +49,8 @@
 \RequirePackage{amssymb}
 \RequirePackage{esint}
 \RequirePackage{changepage}
+\let\counterwithout\relax
+\let\counterwithin\relax
 \RequirePackage{chngcntr}
 \RequirePackage{url}
 \RequirePackage{listings}
