@@ -13,11 +13,11 @@
  %  - FIXME is another highlighting tag :D
 
 
-\title{KLL Spec v0.5.5}
+\title{KLL Spec v0.5.6}
 \titlename{Keyboard Layout Language Spec}
 \author{HaaTa - Jacob Alexander}
 \email{haata@kiibohd.com}
-\docrev{DRAFT - 0.5.5}
+\docrev{DRAFT - 0.5.6}
 \urlname{kiibohd.com}
 
 %%% Titlepage %%%
@@ -43,6 +43,7 @@
 	\vhEntry{0.5c}{2016-10-09}{HaaTa}{Adding pixel addressing types}
 	\vhEntry{0.5.4}{2018-03-24}{HaaTa}{Adding new trigger options}
 	\vhEntry{0.5.5}{2018-05-03}{HaaTa}{Adding Locale support}
+	\vhEntry{0.5.6}{2018-08-11}{HaaTa}{Adding rotation trigger}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -650,6 +651,19 @@ T[17,1] : <result>;
 T[19,0] : <result>;
 # 2 minutes after device usages stops
 T[19,2] : <result>;
+
+# Two rotation triggers, 0 and 1
+T[20,0](0) : <resulta1>;
+T[20,0](1) : <resulta2>;
+T[20,0](2) : <resulta3>;
+T[20,1](0) : <resultb1>;
+T[20,1](1) : <resultb2>;
+
+# Rotate right rotation 0
+<trigger> : rotate(0, 1);
+
+# Rotate left rotation 1
+<trigger> : rotate(1, -1);
 \end{lstlisting}
 
 
