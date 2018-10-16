@@ -1429,6 +1429,8 @@ divmask:<num>
 start       # Start animation
 pause       # Pause animation
 stop        # Stop animation
+single      # Play single animation frame
+            #  then pause
 pos:<frame> # Set animation frame number
 pfunc:<name>(<args>)
             # Frame pixel fill function
@@ -1462,6 +1464,9 @@ replace:<type>
 	    #  Replace if same index, trigger and
 	    #  incoming state is press.
 	    #  If state is release, stop.
+	    # clear
+	    #  Remove all animations in stack before
+	    #  adding, regardless of index.
 \end{lstlisting}
 
 An example modifier setup for an animation.
