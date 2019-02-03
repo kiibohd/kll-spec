@@ -44,6 +44,7 @@
 	\vhEntry{0.5.4}{2018-03-24}{HaaTa}{Adding new trigger options}
 	\vhEntry{0.5.5}{2018-05-03}{HaaTa}{Adding Locale support}
 	\vhEntry{0.5.6}{2018-08-11}{HaaTa}{Adding rotation trigger}
+	\vhEntry{0.5.7}{2019-02-03}{HaaTa}{Adding clearactive replace state}
 \end{versionhistory}
 
 %%% Tables %%%
@@ -1467,6 +1468,11 @@ replace:<type>
 	    # clear
 	    #  Remove all animations in stack before
 	    #  adding, regardless of index.
+	    # clearactive
+	    #  Remove all animations in stack before
+	    #  adding, except for paused/soon paused
+	    #  and do a replace state for the new
+	    #  animation
 \end{lstlisting}
 
 An example modifier setup for an animation.
